@@ -1,0 +1,8 @@
+[package]
+name = "hellorust-libretro"
+version = "0.0.1"
+authors = ["Mike Robinson <mikeprobinsonuk@gmail.com>"]
+
+[lib]
+name = "hellorust-libretro"
+crate-type = ["dylib"]
