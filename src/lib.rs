@@ -6,10 +6,10 @@ use libc::size_t;
 #[repr(C)]
 pub struct retro_game_geometry
 {
-	base_width: uint,
-	base_height: uint,
-	max_width: uint,
-	max_height: uint,
+	base_width: libc::c_uint,
+	base_height: libc::c_uint,
+	max_width: libc::c_uint,
+	max_height: libc::c_uint,
 	aspect_ratio: f32
 }
 
@@ -48,8 +48,8 @@ pub struct retro_game_info
 
 
 static NO_CONTENT: bool = true;
-static SCREEN_WIDTH: uint = 240;
-static SCREEN_HEIGHT: uint = 320;
+static SCREEN_WIDTH: libc::c_uint = 240;
+static SCREEN_HEIGHT: libc::c_uint = 320;
 static FPS: f64 = 120.0;
 static SAMPLE_RATE: f64 = 44100.0;
 static ASPECT_RATIO: f32 = 1.0;
@@ -83,16 +83,16 @@ pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
 }
 
 #[no_mangle]
-pub extern fn retro_api_version() -> uint
+pub extern fn retro_api_version() -> libc::c_uint
 {
 	println!("hello world: retro_api_version");
 	return 1;
 }
 
 
-static mut retro_environment_cb: Option<extern fn (cmd: uint, data: *mut u8) -> bool> = None;
+static mut retro_environment_cb: Option<extern fn (cmd: libc::c_uint, data: *mut u8) -> bool> = None;
 #[no_mangle]
-pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: uint, data: *mut u8) -> bool)
+pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: libc::c_uint, data: *mut u8) -> bool)
 {
 	println!("hello world: retro_set_environment");
 	retro_environment_cb = Some(cb);
@@ -101,9 +101,9 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: uint, data: *mut 
 	retro_environment_cb.unwrap()(18, no_content);
 }
 
-static mut retro_video_refresh_cb: Option<extern fn (data: *mut libc::types::common::c95::c_void, width: uint, height: uint, pitch: uint)> = None;
+static mut retro_video_refresh_cb: Option<extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint)> = None;
 #[no_mangle]
-pub unsafe extern fn retro_set_video_refresh(cb: extern fn (data: *mut libc::types::common::c95::c_void, width: uint, height: uint, pitch: uint))
+pub unsafe extern fn retro_set_video_refresh(cb: extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint))
 {
 	println!("hello world: retro_set_video_refresh");
 	retro_video_refresh_cb = Some(cb);
@@ -134,16 +134,16 @@ pub unsafe extern fn retro_set_input_poll(cb: extern fn())
 }
 
 
-static mut retro_input_state_cb: Option<extern fn(port: uint, device: uint, index: uint, id: uint) -> i16> = None;
+static mut retro_input_state_cb: Option<extern fn(port: libc::c_uint, device: libc::c_uint, index: libc::c_uint, id: libc::c_uint) -> i16> = None;
 #[no_mangle]
-pub unsafe extern fn retro_set_input_state(cb: extern fn(port: uint, device: uint, index: uint, id: uint) -> i16)
+pub unsafe extern fn retro_set_input_state(cb: extern fn(port: libc::c_uint, device: libc::c_uint, index: libc::c_uint, id: libc::c_uint) -> i16)
 {
 	println!("hello world: retro_set_input_state");
 	retro_input_state_cb = Some(cb);
 }
 
 #[no_mangle]
-pub unsafe extern fn retro_set_controller_port_device(_port: uint, _device: uint)
+pub unsafe extern fn retro_set_controller_port_device(_port: libc::c_uint, _device: libc::c_uint)
 {
 	println!("hello world: retro_set_controller_port_device");
 }
@@ -183,13 +183,13 @@ pub unsafe extern fn retro_cheat_reset()
 }
 
 #[no_mangle]
-pub unsafe extern fn retro_cheat_set(_index: uint, _enabled: bool, _code: *mut u8)
+pub unsafe extern fn retro_cheat_set(_index: libc::c_uint, _enabled: bool, _code: *mut u8)
 {
 	println!("hello world: retro_cheat_reset");
 }
 
 #[no_mangle]
-pub unsafe extern fn retro_load_game_special(_type: uint, _info: *mut retro_game_info, _num: size_t) -> bool
+pub unsafe extern fn retro_load_game_special(_type: libc::c_uint, _info: *mut retro_game_info, _num: size_t) -> bool
 {
 	println!("hello world: retro_load_game_special");
 	false
@@ -202,20 +202,20 @@ pub extern fn retro_unload_game()
 }
 
 #[no_mangle]
-pub extern fn retro_get_region() -> uint
+pub extern fn retro_get_region() -> libc::c_uint
 {
 	// #define RETRO_REGION_NTSC  0
 	0
 }
 
 #[no_mangle]
-pub extern fn retro_get_memory_data(_id: uint) -> *mut u8
+pub extern fn retro_get_memory_data(_id: libc::c_uint) -> *mut u8
 {
 	std::ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern fn retro_get_memory_size(_id: uint) -> size_t
+pub extern fn retro_get_memory_size(_id: libc::c_uint) -> size_t
 {
 	0
 }
@@ -229,7 +229,7 @@ pub extern fn retro_init()
 {
 	unsafe
 	{
-	frame_buf = Some(libc::malloc((std::mem::size_of::<u16>() * SCREEN_WIDTH * SCREEN_HEIGHT) as u64));
+	frame_buf = Some(libc::malloc((std::mem::size_of::<u16>() * (SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64));
 	}
 	println!("hello world: retro_init");
 }
@@ -250,7 +250,6 @@ pub extern fn retro_deinit()
 #[no_mangle]
 pub extern fn retro_run()
 {
-	println!("hello world: retro_run");
 	unsafe
 	{
 		retro_video_refresh_cb.unwrap()(frame_buf.unwrap(), SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH);
