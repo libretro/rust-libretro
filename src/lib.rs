@@ -279,7 +279,7 @@ pub extern fn retro_run()
 	// I want an owned reference to the framebuffer as a u16 array of SCREEN_WIDTH * SCREEN_HEIGHT here, aliasing the static mut
 	// Tell Rust it's initialized and safe to do whatever with it
 
-	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
+	let mut _owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
 	
 
 	unsafe
