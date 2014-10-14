@@ -99,6 +99,7 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: libc::c_uint, dat
 	let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
 	//#define RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME 18
 	retro_environment_cb.unwrap()(18, no_content);
+	
 }
 
 static mut retro_video_refresh_cb: Option<extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint)> = None;
@@ -229,7 +230,7 @@ pub extern fn retro_init()
 {
 	unsafe
 	{
-	frame_buf = Some(libc::malloc((std::mem::size_of::<u16>() * (SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64));
+	frame_buf = Some(libc::calloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64, std::mem::size_of::<u16>() as u64));
 	}
 	println!("hello world: retro_init");
 }
@@ -250,8 +251,12 @@ pub extern fn retro_deinit()
 #[no_mangle]
 pub extern fn retro_run()
 {
+	// I want an owned reference to the framebuffer as a u16 array of SCREEN_WIDTH * SCREEN_HEIGHT here, aliasing the static mut
+	// Tell Rust it's initialized and safe to do whatever with it
+	
 	unsafe
 	{
+		retro_input_poll_cb.unwrap()();
 		retro_video_refresh_cb.unwrap()(frame_buf.unwrap(), SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH);
 	}
 }
