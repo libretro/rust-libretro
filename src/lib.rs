@@ -2,9 +2,12 @@
 extern crate libc;
 extern crate image;
 extern crate rlibc;
-use libc::size_t;
+extern crate native;
 
+use libc::size_t;
+use std::io::File;
 use image::GenericImage;
+
 
 #[repr(C)]
 pub struct retro_game_geometry
@@ -226,7 +229,7 @@ pub extern fn retro_get_memory_size(_id: libc::c_uint) -> size_t
 
 
 
-static mut frame_buf: Option<*mut libc::types::common::c95::c_void> = None;
+static mut frame_buf: *mut libc::types::common::c95::c_void = 0i as *mut libc::types::common::c95::c_void;
 
 #[no_mangle]
 pub extern fn retro_init()
@@ -235,28 +238,39 @@ pub extern fn retro_init()
 
 	unsafe
 	{
-	frame_buf = Some(libc::calloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64, std::mem::size_of::<u16>() as u64));
+	// Don't initialize so we can see the initialized memory on the screen
+	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * std::mem::size_of::<u16>() as u64);
 	}
-	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
 
-	let img = image::open(&Path::new("/tmp/test.png"));
+	let argc = 0;
+	let argv = std::ptr::null();
 
+
+	native::start(argc, argv, image_loader);
+
+}
+
+fn image_loader()
+{
+	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
+
+	let img = image::load(File::open(&Path::new("/tmp/test.png")), image::PNG);
 	match img
 	{
 		Err(e) => { println!("error opening image: {}", e); }
-		Ok(i) => {
-			for pixel in i.pixels()
+		Ok(imgunwrapped) => {
+			let mut i: uint = 0;
+			for pixel in imgunwrapped.pixels()
 			{
-				let mut i = 0;
 				let (_,_,p) = pixel;
 				let (r, g, b, _) = p.channels();
 				let rgb565: u16 = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
 				owned_buf.as_mut_slice()[i] = rgb565;
 				i = i + 1;
 			}
+		println!("loaded image");
 		}
 	}
-
 }
 
 #[no_mangle]
@@ -267,25 +281,20 @@ pub extern fn retro_load_game(_info: *mut u8) -> bool
 }
 
 #[no_mangle]
-pub extern fn retro_deinit()
+pub unsafe extern fn retro_deinit()
 {
 	println!("hello world: retro_deinit");
-	// TODO free the frame buffer
+	libc::free(frame_buf);
 }
 
 #[no_mangle]
 pub extern fn retro_run()
 {
-	// I want an owned reference to the framebuffer as a u16 array of SCREEN_WIDTH * SCREEN_HEIGHT here, aliasing the static mut
-	// Tell Rust it's initialized and safe to do whatever with it
-
-	let mut _owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
-	
 
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
-		retro_video_refresh_cb.unwrap()(frame_buf.unwrap(), SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH);
+		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH);
 	}
 }
 
