@@ -247,11 +247,12 @@ pub extern fn retro_init()
 		Ok(i) => {
 			for pixel in i.pixels()
 			{
-				let i = 0;
+				let mut i = 0;
 				let (_,_,p) = pixel;
 				let (r, g, b, _) = p.channels();
-				let Rgb565: u16 = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
-				owned_buf.as_mut_slice()[i] = Rgb565;
+				let rgb565: u16 = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
+				owned_buf.as_mut_slice()[i] = rgb565;
+				i = i + 1;
 			}
 		}
 	}
