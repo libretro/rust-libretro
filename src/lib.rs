@@ -28,9 +28,9 @@ pub struct retro_system_av_info
 #[repr(C)]
 pub struct retro_system_info
 {
-	library_name: *mut u8, 
-	library_version: *mut u8,
-	valid_extensions: *mut u8,
+	library_name: *const i8, 
+	library_version: *const i8,
+	valid_extensions: *const i8,
 	need_fullpath: bool,                                       
 	block_extract: bool     
 }
@@ -52,9 +52,9 @@ pub extern fn retro_get_system_av_info(info: &mut retro_system_av_info)
 pub unsafe extern fn retro_get_system_info(info: &mut retro_system_info)
 {
 	println!("Set system info");
-	info.library_name     = std::mem::transmute(&"Hello World");
-	info.library_version  = std::mem::transmute(&"0.0.1");
-	info.valid_extensions = std::mem::transmute(&"");
+	info.library_name     = "Hello World".to_c_str().as_ptr();
+	info.library_version  = "0.0.1".to_c_str().as_ptr();
+	info.valid_extensions = "".to_c_str().as_ptr();
 	info.need_fullpath    = false;
 	info.block_extract    = false;
 }
@@ -115,7 +115,7 @@ pub extern fn retro_deinit()
 #[no_mangle]
 pub extern fn retro_run()
 {
-	println!("Core deinit");
+	println!("Retro run");
 }
 
 
