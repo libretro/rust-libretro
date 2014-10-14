@@ -54,6 +54,8 @@ pub struct retro_game_info
 
 
 static NO_CONTENT: bool = true;
+static RETRO_PIXEL_FORMAT_RGB565: u32 = 2;
+
 static SCREEN_WIDTH: libc::c_uint = 320;
 static SCREEN_HEIGHT: libc::c_uint = 240;
 static FPS: f64 = 120.0;
@@ -105,7 +107,10 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: libc::c_uint, dat
 	let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
 	//#define RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME 18
 	retro_environment_cb.unwrap()(18, no_content);
-	
+	//#define RETRO_ENVIRONMENT_SET_PIXEL_FORMAT 10	
+	let pixel_format: *mut u8 = std::mem::transmute(&RETRO_PIXEL_FORMAT_RGB565);
+	retro_environment_cb.unwrap()(10, pixel_format);
+
 }
 
 static mut retro_video_refresh_cb: Option<extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint)> = None;
@@ -259,7 +264,7 @@ fn image_loader()
 	{
 		Err(e) => { println!("error opening image: {}", e); }
 		Ok(imgunwrapped) => {
-			let mut i: uint = 0;
+        	let mut i: uint = 0;
 			for pixel in imgunwrapped.pixels()
 			{
 				let (_,_,p) = pixel;
@@ -268,9 +273,8 @@ fn image_loader()
 				owned_buf.as_mut_slice()[i] = rgb565;
 				i = i + 1;
 			}
-		println!("loaded image");
 		}
-	}
+	}	
 }
 
 #[no_mangle]
@@ -294,7 +298,7 @@ pub extern fn retro_run()
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
-		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH);
+		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 	}
 }
 
