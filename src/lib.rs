@@ -1,5 +1,7 @@
 #![crate_type = "dylib"]
 extern crate libc;
+extern crate rlibc;
+use libc::size_t;
 
 #[repr(C)]
 pub struct retro_game_geometry
@@ -38,7 +40,7 @@ pub struct retro_system_info
 #[no_mangle]
 pub extern fn retro_get_system_av_info(info: &mut retro_system_av_info)
 {
-	println!("Set system AV info");
+	println!("hello world: retro_get_system_av_info()");
 	info.timing.fps = 120.0;
 	info.timing.sample_rate = 44100.0;
 	info.geometry.base_width   = 240;
@@ -51,9 +53,11 @@ pub extern fn retro_get_system_av_info(info: &mut retro_system_av_info)
 #[no_mangle]
 pub unsafe extern fn retro_get_system_info(info: &mut retro_system_info)
 {
-	println!("Set system info");
-	info.library_name     = "Hello World\0".as_ptr();
-	info.library_version  = "0.0.1\0".as_ptr();
+	println!("hello world: retro_get_system_info()");
+	let ptr: *mut u8 = std::mem::transmute(info);
+	rlibc::memset(ptr, 0, std::mem::size_of::<retro_system_info>());
+	info.library_name     = "Hello World\0".as_ptr();  // Rust strings are not null terminated
+	info.library_version  = "0.0.1\0".as_ptr();        // Null terminate manually
 	info.valid_extensions = "\0".as_ptr();
 	info.need_fullpath    = false;
 	info.block_extract    = false;
@@ -62,17 +66,17 @@ pub unsafe extern fn retro_get_system_info(info: &mut retro_system_info)
 #[no_mangle]
 pub extern fn retro_api_version() -> uint
 {
-	println!("Set API version");
+	println!("hello world: retro_api_version()");
 	return 1;
 }
 
 
-static mut retro_environment_cb: Option<extern fn (cmd: uint, data: *mut u8)->bool> = None;
+static mut retro_environment_cb: Option<extern fn (cmd: uint, data: *mut u8) -> bool> = None;
 
 #[no_mangle]
-pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: uint, data: *mut u8)->bool)
+pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: uint, data: *mut u8) -> bool)
 {
-	println!("Set environment callback");
+	println!("hello world: retro_set_environment()");
 	retro_environment_cb = Some(cb);
 }
 
@@ -81,20 +85,53 @@ static mut retro_video_refresh_cb: Option<extern fn (data: *mut u8, width: uint,
 #[no_mangle]
 pub unsafe extern fn retro_set_video_refresh(cb: extern fn (data: *mut u8, width: uint, height: uint, pitch: uint))
 {
-	println!("Set video refresh callback");
+	println!("hello world: retro_set_video_refresh()");
 	retro_video_refresh_cb = Some(cb);
 }
 
+static mut retro_audio_sample_cb: Option<extern fn (left: i16, right: i16)> = None;
 
+#[no_mangle]
+pub unsafe extern fn retro_set_audio_sample(cb: extern fn (left: i16, right: i16))
+{
+	println!("hello world: retro_set_audio_sample()");
+	retro_audio_sample_cb = Some(cb);
+}
+
+static mut retro_audio_sample_batch_cb: Option<extern fn(data: *mut i16, frames: size_t) -> size_t> = None;
+
+pub unsafe extern fn retro_set_audio_sample_batch(cb: extern fn(data: *mut i16, frames: size_t) -> size_t)
+{
+	println!("hello world: retro_set_audio_sample_batch()");
+   retro_audio_sample_batch_cb = Some(cb);
+}
+
+/*
+void retro_set_input_poll(retro_input_poll_t cb)
+{
+   input_poll_cb = cb;
+}
+typedef void (*retro_input_poll_t)(void);
+
+void retro_set_input_state(retro_input_state_t cb)
+{
+   input_state_cb = cb;
+}
+
+typedef int16_t (*retro_input_state_t)(unsigned port, unsigned device, 
+      unsigned index, unsigned id);
+*/
+
+static NO_CONTENT: bool = true;
 
 #[no_mangle]
 pub extern fn retro_init()
 {
-	println!("Core init");
+	println!("hello world: retro_init()");
 
 	unsafe
 	{
-		let no_content: *mut u8 = std::mem::transmute(&true);
+		let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
 		//#define RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME 18
 		retro_environment_cb.unwrap()(18, no_content);
 	}
@@ -102,20 +139,20 @@ pub extern fn retro_init()
 #[no_mangle]
 pub extern fn retro_load_game(_info: *mut u8) -> bool
 {
-	println!("Load game");
+	println!("hello world: retro_load_game()");
 	true
 }
 
 #[no_mangle]
 pub extern fn retro_deinit()
 {
-	println!("Core deinit");
+	println!("hello world: retro_deinit()");
 }
 
 #[no_mangle]
 pub extern fn retro_run()
 {
-	println!("Retro run");
+	println!("hello world: retro_run()");
 }
 
 
