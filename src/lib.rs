@@ -1,7 +1,10 @@
 #![crate_type = "dylib"]
 extern crate libc;
+extern crate image;
 extern crate rlibc;
 use libc::size_t;
+
+use image::GenericImage;
 
 #[repr(C)]
 pub struct retro_game_geometry
@@ -48,8 +51,8 @@ pub struct retro_game_info
 
 
 static NO_CONTENT: bool = true;
-static SCREEN_WIDTH: libc::c_uint = 240;
-static SCREEN_HEIGHT: libc::c_uint = 320;
+static SCREEN_WIDTH: libc::c_uint = 320;
+static SCREEN_HEIGHT: libc::c_uint = 240;
 static FPS: f64 = 120.0;
 static SAMPLE_RATE: f64 = 44100.0;
 static ASPECT_RATIO: f32 = 1.0;
@@ -228,11 +231,31 @@ static mut frame_buf: Option<*mut libc::types::common::c95::c_void> = None;
 #[no_mangle]
 pub extern fn retro_init()
 {
+	println!("hello world: retro_init");
+
 	unsafe
 	{
 	frame_buf = Some(libc::calloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64, std::mem::size_of::<u16>() as u64));
 	}
-	println!("hello world: retro_init");
+	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
+
+	let img = image::open(&Path::new("/tmp/test.png"));
+
+	match img
+	{
+		Err(e) => { println!("error opening image: {}", e); }
+		Ok(i) => {
+			for pixel in i.pixels()
+			{
+				let i = 0;
+				let (_,_,p) = pixel;
+				let (r, g, b, _) = p.channels();
+				let Rgb565: u16 = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
+				owned_buf.as_mut_slice()[i] = Rgb565;
+			}
+		}
+	}
+
 }
 
 #[no_mangle]
@@ -246,6 +269,7 @@ pub extern fn retro_load_game(_info: *mut u8) -> bool
 pub extern fn retro_deinit()
 {
 	println!("hello world: retro_deinit");
+	// TODO free the frame buffer
 }
 
 #[no_mangle]
@@ -253,7 +277,10 @@ pub extern fn retro_run()
 {
 	// I want an owned reference to the framebuffer as a u16 array of SCREEN_WIDTH * SCREEN_HEIGHT here, aliasing the static mut
 	// Tell Rust it's initialized and safe to do whatever with it
+
+	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf.unwrap() as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
 	
+
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
