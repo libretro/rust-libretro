@@ -263,18 +263,14 @@ fn image_loader()
 	match img
 	{
 		Err(e) => { println!("error opening image: {}", e); }
-		Ok(imgunwrapped) => {
-        	let mut i: uint = 0;
-			for pixel in imgunwrapped.pixels()
+		Ok(someimg) => {
+			for ((_, _, p), buf) in someimg.pixels().zip(owned_buf.as_mut_slice().iter_mut())
 			{
-				let (_,_,p) = pixel;
 				let (r, g, b, _) = p.channels();
-				let rgb565: u16 = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
-				owned_buf.as_mut_slice()[i] = rgb565;
-				i = i + 1;
+				*buf = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
 			}
 		}
-	}	
+	}
 }
 
 #[no_mangle]
