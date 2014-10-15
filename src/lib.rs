@@ -2,10 +2,10 @@
 extern crate libc;
 extern crate image;
 extern crate rlibc;
+extern crate rustrt;
 extern crate native;
 
 use libc::size_t;
-use std::io::File;
 use image::GenericImage;
 
 
@@ -238,28 +238,48 @@ static mut frame_buf: *mut libc::types::common::c95::c_void = 0i as *mut libc::t
 
 #[no_mangle]
 pub extern fn retro_init()
-{
+{	
+
 	println!("hello world: retro_init");
 
 	unsafe
 	{
-	// Don't initialize so we can see the initialized memory on the screen
 	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * std::mem::size_of::<u16>() as u64);
 	}
 
-	let argc = 0;
-	let argv = std::ptr::null();
 
+	image_loader();
 
-	native::start(argc, argv, image_loader);
+    let argc = 0;
+    let argv = std::ptr::null();
+	native::start(argc, argv, thread_spawner);
 
+	println!("hello world: retro_init done");
 }
+
+fn thread_spawner()
+{
+	rustrt::thread::Thread::spawn(print_message);
+}
+
+fn print_message() {
+	use std::io::Timer;
+	use std::time::Duration;
+
+	for i in range(0i, 20){
+		let mut timer = Timer::new().unwrap();
+		timer.sleep(Duration::milliseconds(500)); // block the task for awhile
+		println!("I am running in a different thread!"); }
+}
+
+
+pub static HELLOPNG: &'static [u8] = include_bin!("test.png");
 
 fn image_loader()
 {
 	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
 
-	let img = image::load(File::open(&Path::new("/tmp/test.png")), image::PNG);
+	let img = image::load_from_memory(HELLOPNG, image::PNG);
 	match img
 	{
 		Err(e) => { println!("error opening image: {}", e); }
