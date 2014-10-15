@@ -7,7 +7,8 @@ extern crate native;
 
 use libc::size_t;
 use image::GenericImage;
-
+use libc::types::common::c95::c_void;
+use std::mem::transmute;
 
 #[repr(C)]
 pub struct retro_game_geometry
@@ -113,9 +114,9 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: libc::c_uint, dat
 
 }
 
-static mut retro_video_refresh_cb: Option<extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint)> = None;
+static mut retro_video_refresh_cb: Option<extern fn (data: *mut c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint)> = None;
 #[no_mangle]
-pub unsafe extern fn retro_set_video_refresh(cb: extern fn (data: *mut libc::types::common::c95::c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint))
+pub unsafe extern fn retro_set_video_refresh(cb: extern fn (data: *mut c_void, width: libc::c_uint, height: libc::c_uint, pitch: libc::c_uint))
 {
 	println!("hello world: retro_set_video_refresh");
 	retro_video_refresh_cb = Some(cb);
@@ -234,7 +235,7 @@ pub extern fn retro_get_memory_size(_id: libc::c_uint) -> size_t
 
 
 
-static mut frame_buf: *mut libc::types::common::c95::c_void = 0i as *mut libc::types::common::c95::c_void;
+static mut frame_buf: *mut c_void = 0i as *mut c_void;
 
 #[no_mangle]
 pub extern fn retro_init()
@@ -250,24 +251,14 @@ pub extern fn retro_init()
 
 	image_loader();
 
-	rustrt::thread::Thread::spawn(print_message_spawner);
+	rustrt::thread::Thread::spawn(print_message);
 	println!("hello world: retro_init done");
 }
 
-fn print_message_spawner()
-{
-	let argc = 0;
-    let argv = std::ptr::null();
-	native::start(argc, argv, print_message);
-}
 
 fn print_message() {
-	use std::io::Timer;
-	use std::time::Duration;
-
-	for i in range(0i, 20){
-		let mut timer = Timer::new().unwrap();
-		timer.sleep(Duration::milliseconds(500)); // block the task for awhile
+	
+	for _i in range(0i, 20){
 		println!("I am running in a different thread!"); }
 }
 
@@ -306,10 +297,26 @@ pub unsafe extern fn retro_deinit()
 	libc::free(frame_buf);
 }
 
+struct GState
+{
+	frame: uint
+}
+
+static mut g_state: GState = GState{frame: 0};
+
 #[no_mangle]
 pub extern fn retro_run()
 {
+	let mut state = unsafe {std::c_vec::CVec::<GState>::new(transmute(&g_state), 1)};
+	
+	let g = &mut state.as_mut_slice()[0];
 
+	g.frame = g.frame + 1;	
+
+//	state.as_mut_slice()[0].frame = state.as_mut_slice()[0].frame +1;
+
+	println!("{}", g.frame);
+	
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
