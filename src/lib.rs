@@ -250,16 +250,15 @@ pub extern fn retro_init()
 
 	image_loader();
 
-    let argc = 0;
-    let argv = std::ptr::null();
-	native::start(argc, argv, thread_spawner);
-
+	rustrt::thread::Thread::spawn(print_message_spawner);
 	println!("hello world: retro_init done");
 }
 
-fn thread_spawner()
+fn print_message_spawner()
 {
-	rustrt::thread::Thread::spawn(print_message);
+	let argc = 0;
+    let argv = std::ptr::null();
+	native::start(argc, argv, print_message);
 }
 
 fn print_message() {
