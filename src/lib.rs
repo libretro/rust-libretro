@@ -89,7 +89,7 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: c_uint, data: *mu
 	let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, no_content);
 
-	let pixel_format: *mut u8 = std::mem::transmute(&_RETRO_PIXEL_FORMAT_RGB565);
+	let pixel_format: *mut u8 = std::mem::transmute(&_RETRO_PIXEL_FORMAT_RGB1555);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
@@ -113,13 +113,10 @@ pub extern fn retro_init()
 	println!("hello world: retro_init done");
 }
 
-
-
 static WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
 static QUIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
 static mut QUIT_FLAG: bool = false;
 static mut QUIT_DONE_FLAG: bool = false;
-
 
 fn print_message()
 {
