@@ -4,11 +4,13 @@ extern crate image;
 extern crate rlibc;
 extern crate rustrt;
 extern crate native;
+extern crate sync;
 
 use libc::size_t;
 use image::GenericImage;
 use libc::types::common::c95::c_void;
 use std::mem::transmute;
+use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 
 #[repr(C)]
 pub struct retro_game_geometry
@@ -256,10 +258,30 @@ pub extern fn retro_init()
 }
 
 
-fn print_message() {
-	
-	for _i in range(0i, 20){
-		println!("I am running in a different thread!"); }
+
+static WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
+static QUIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
+static mut QUIT_FLAG: bool = false;
+static mut QUIT_DONE_FLAG: bool = false;
+
+
+fn print_message()
+{
+	loop
+	{
+		unsafe {
+		    let guard = WAIT.lock();
+			guard.wait();
+		}
+		println!("I am running in a different thread!");
+		unsafe {
+		    let _guard = QUIT.lock();
+			if QUIT_FLAG {break};
+		}
+	}
+	unsafe {
+		QUIT_DONE_FLAG = true;
+	}
 }
 
 
@@ -295,12 +317,32 @@ pub unsafe extern fn retro_deinit()
 {
 	println!("hello world: retro_deinit");
 	libc::free(frame_buf);
+
+	{
+		let guard = WAIT.lock();
+		guard.signal();
+	}
+	{
+	    let _guard = QUIT.lock();
+		QUIT_FLAG = true;
+	}
+
+	// Rust's native concurrency library is still experimental and incomplete
+	// Spinlock for now
+	let mut spinlock_quit = false;
+	while !spinlock_quit
+	{
+	    spinlock_quit = QUIT_DONE_FLAG;
+	}
+	WAIT.destroy();
+	QUIT.destroy();
 }
 
 struct GState
 {
 	frame: uint
 }
+
 
 static mut g_state: GState = GState{frame: 0};
 
@@ -313,10 +355,14 @@ pub extern fn retro_run()
 
 	g.frame = g.frame + 1;	
 
-//	state.as_mut_slice()[0].frame = state.as_mut_slice()[0].frame +1;
+	if g.frame % 60 == 0
+	{
+		unsafe {
+			let guard = WAIT.lock();
+			guard.signal();
+		}
+	}
 
-	println!("{}", g.frame);
-	
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
