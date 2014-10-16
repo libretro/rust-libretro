@@ -89,7 +89,7 @@ pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: c_uint, data: *mu
 	let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, no_content);
 
-	let pixel_format: *mut u8 = std::mem::transmute(&_RETRO_PIXEL_FORMAT_RGB1555);
+	let pixel_format: *mut u8 = std::mem::transmute(&_RETRO_PIXEL_FORMAT_RGB565);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
@@ -104,8 +104,8 @@ pub extern fn retro_init()
 	unsafe
 	{
 	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * std::mem::size_of::<u16>() as u64);
+	println!("frame_buf: {}", frame_buf);
 	}
-
 
 	image_loader();
 
@@ -143,6 +143,12 @@ pub static HELLOPNG: &'static [u8] = include_bin!("test.png");
 fn image_loader()
 {
 	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
+
+	unsafe {
+	let addr: int = transmute(&owned_buf.as_mut_slice()[0]);
+
+	println!("owned_buf: {:x}", addr);
+	}
 
 	let img = image::load_from_memory(HELLOPNG, image::PNG);
 	match img
@@ -183,6 +189,7 @@ pub unsafe extern fn retro_deinit()
 	}
 	WAIT.destroy();
 	QUIT.destroy();
+	println!("hello world: retro_deinit done");
 }
 
 struct GState
@@ -213,7 +220,7 @@ pub extern fn retro_run()
 	unsafe
 	{
 		retro_input_poll_cb.unwrap()();
-		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * 2);
 	}
 }
 
