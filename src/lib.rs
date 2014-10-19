@@ -16,20 +16,24 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#![no_std]
 #![crate_type = "dylib"]
 #![feature(globs)]
+
 extern crate libc;
 extern crate image;
 extern crate rlibc;
 extern crate rustrt;
+extern crate core;
 
 use image::GenericImage;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
-use std::mem::transmute;
-use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
+use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 use libretro::*;
+use core::prelude::*;
+use core::intrinsics::transmute;
+use core::mem::size_of;
 
 pub mod libretro;
 
@@ -42,7 +46,7 @@ static _RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: c_uint = 10;
 
 static SCREEN_WIDTH: c_uint = 320;
 static SCREEN_HEIGHT: c_uint = 240;
-static FPS: f64 = 60.0;
+static FPS: f64 = 120.0;
 static SAMPLE_RATE: f64 = 48000.0;
 
 static ASPECT_RATIO: f32 = 1.0;
@@ -50,7 +54,7 @@ static ASPECT_RATIO: f32 = 1.0;
 #[no_mangle]
 pub unsafe extern fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
-	println!("hello world: retro_get_system_av_info");
+	// println!("hello world: retro_get_system_av_info");
 	(*info).timing.fps = FPS;
 	(*info).timing.sample_rate = SAMPLE_RATE;
 	(*info).geometry.base_width   = SCREEN_WIDTH;
@@ -63,8 +67,8 @@ pub unsafe extern fn retro_get_system_av_info(info: *mut retro_system_av_info)
 #[no_mangle]
 pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
 {
-	println!("hello world: retro_get_system_info");
-	rlibc::memset(std::mem::transmute(info), 0, std::mem::size_of::<retro_system_info>());
+	// println!("hello world: retro_get_system_info");
+	rlibc::memset(transmute(info), 0, size_of::<retro_system_info>());
 
 	(*info).library_name     = "Hello World\0".as_ptr();  // Rust strings are not null terminated
 	(*info).library_version  = "0.0.1\0".as_ptr();        // Null terminate manually
@@ -76,7 +80,7 @@ pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
 #[no_mangle]
 pub extern fn retro_api_version() -> c_uint
 {
-	println!("hello world: retro_api_version");
+	// println!("hello world: retro_api_version");
 	return 1;
 }
 
@@ -84,13 +88,13 @@ static mut retro_environment_cb: Option<extern fn (cmd: c_uint, data: *mut u8) -
 #[no_mangle]
 pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: c_uint, data: *mut u8) -> bool)
 {
-	println!("hello world: retro_set_environment");
+	// println!("hello world: retro_set_environment");
 	retro_environment_cb = Some(cb);
 
-	let no_content: *mut u8 = std::mem::transmute(&NO_CONTENT);
+	let no_content: *mut u8 = transmute(&NO_CONTENT);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, no_content);
 
-	let pixel_format: *mut u8 = std::mem::transmute(&_RETRO_PIXEL_FORMAT_RGB565);
+	let pixel_format: *mut u8 = transmute(&_RETRO_PIXEL_FORMAT_RGB565);
 	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
@@ -100,18 +104,18 @@ static mut frame_buf: *mut c_void = 0i as *mut c_void;
 pub extern fn retro_init()
 {	
 
-	println!("hello world: retro_init");
+	// println!("hello world: retro_init");
 
 	unsafe
 	{
-	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * std::mem::size_of::<u16>() as u64);
-	println!("frame_buf: {}", frame_buf);
+	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
+	// println!("frame_buf: {}", frame_buf);
 	}
 
 	image_loader();
 
 	rustrt::thread::Thread::spawn(print_message);
-	println!("hello world: retro_init done");
+	// println!("hello world: retro_init done");
 }
 
 static WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
@@ -124,16 +128,15 @@ fn print_message()
 	loop
 	{
 		unsafe {
-		    let guard = WAIT.lock();
-			guard.wait();
-		}
-		println!("I am running in a different thread!");
-		unsafe {
-		   let _guard = QUIT.lock();
-			if QUIT_FLAG {break};
-		}
-	}
-   println!("QUIT_DONE_FLAG set");
+		   {
+            let guard = WAIT.lock();
+			   guard.wait();
+         }
+			// println!("I am running in a different thread!");
+		   if QUIT_FLAG {break};
+   	}
+   }
+   // println!("QUIT_DONE_FLAG set");
 	unsafe {
 		QUIT_DONE_FLAG = true;
 	}
@@ -144,20 +147,14 @@ pub static HELLOPNG: &'static [u8] = include_bin!("test.png");
 
 fn image_loader()
 {
-	let mut owned_buf = unsafe {std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
-
-	unsafe {
-	let addr: int = transmute(&owned_buf.as_mut_slice()[0]);
-
-	println!("owned_buf: {:x}", addr);
-	}
+	let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
 
 	let img = image::load_from_memory(HELLOPNG, image::PNG);
 	match img
 	{
-		Err(e) => { println!("error opening image: {}", e); }
+		Err(_e) => { }// println!("error opening image: {}", e); }
 		Ok(someimg) => {
-			for ((_, _, p), buf) in someimg.pixels().zip(owned_buf.as_mut_slice().iter_mut())
+			for ((_, _, p), buf) in someimg.pixels().zip(buf_slice.iter_mut())
 			{
 				let (r, g, b, _) = p.channels();
 				*buf = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
@@ -170,7 +167,7 @@ fn image_loader()
 #[no_mangle]
 pub unsafe extern fn retro_deinit()
 {
-	println!("hello world: retro_deinit");
+	// println!("hello world: retro_deinit");
 	libc::free(frame_buf);
 
    // Rust's native concurrency library is still experimental and incomplete
@@ -179,29 +176,27 @@ pub unsafe extern fn retro_deinit()
 	while !spinlock_quit
 	{
    	{
-         println!("Acquiring WAIT lock");
+         // println!("Acquiring WAIT lock");
    		let guard = WAIT.lock();
-         println!("Signalling WAIT lock");
+         // println!("Signalling WAIT lock");
    		guard.signal();
    	}
    	{
-         println!("Acquiring QUIT lock");
+         // println!("Acquiring QUIT lock");
    	   let _guard = QUIT.lock();
-         println!("Setting QUIT flag");
+         // println!("Setting QUIT flag");
    		QUIT_FLAG = true;
    	}
 	    spinlock_quit = QUIT_DONE_FLAG;
 	}
 	WAIT.destroy();
 	QUIT.destroy();
-	println!("hello world: retro_deinit done");
+	// println!("hello world: retro_deinit done");
 }
 
 struct GState
 {
 	frame: uint,
-   internal_frameskip: u8,
-   video_latency: u8,
    x: u32,
    y: u32,  
 }
@@ -210,11 +205,15 @@ static mut g_state: GState =
 GState
 {
    frame: 0,
-   internal_frameskip: 0,
-   video_latency: 0,
    x: 0,
    y: 0
 };
+
+
+unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
+{
+      transmute(core::raw::Slice {data: base as *const T, len: length})
+}
 
 #[no_mangle]
 pub extern fn retro_run()
@@ -233,11 +232,11 @@ pub extern fn retro_run()
    let right = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)};
    let down = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)};
    let left = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)};
-  
-	let mut state = unsafe {std::c_vec::CVec::<GState>::new(transmute(&g_state), 1)};
-	
-	let g = &mut state.as_mut_slice()[0];
 
+// TODO how to combine this into one statement?
+   let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
+   let g = &mut g_tmp[0];
+ 
 	g.frame = g.frame + 1;
    
    if (up == 1) && (g.y > 0)
@@ -262,7 +261,7 @@ pub extern fn retro_run()
 
    }
 
-   unsafe {write_pixel(g.x, g.y);}
+   write_pixel(g.x, g.y);
 
 	if g.frame % 60 == 0
 	{
@@ -277,10 +276,8 @@ pub extern fn retro_run()
 	}
 }
 
-unsafe fn write_pixel(x: u32, y: u32)
+fn write_pixel(x: u32, y: u32)
 {
-   let mut owned_buf = std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint);
-   let px = &mut owned_buf.as_mut_slice()[x as uint + y as uint * SCREEN_WIDTH as uint];
-   *px = 0xffff;   
-
+   let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
+   buf_slice[x as uint + y as uint * SCREEN_WIDTH as uint] = 0xffff;   
 }
