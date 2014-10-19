@@ -7,5 +7,3 @@ authors = ["Mike Robinson <mikeprobinsonuk@gmail.com>"]
 name = "hellorust-libretro"
 crate-type = ["dylib"]
 
-[dependencies.image]
-git = "https://github.com/PistonDevelopers/rust-image"

@@ -21,12 +21,10 @@
 #![feature(globs)]
 
 extern crate libc;
-extern crate image;
 extern crate rlibc;
 extern crate rustrt;
 extern crate core;
 
-use image::GenericImage;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
@@ -143,24 +141,13 @@ fn print_message()
 }
 
 
-pub static HELLOPNG: &'static [u8] = include_bin!("test.png");
+pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 
 fn image_loader()
 {
-	let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
-
-	let img = image::load_from_memory(HELLOPNG, image::PNG);
-	match img
-	{
-		Err(_e) => { }// println!("error opening image: {}", e); }
-		Ok(someimg) => {
-			for ((_, _, p), buf) in someimg.pixels().zip(buf_slice.iter_mut())
-			{
-				let (r, g, b, _) = p.channels();
-				*buf = ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3);
-			}
-		}
-	}
+   unsafe {
+   	rlibc::memcpy(transmute(frame_buf), transmute(&RAWIMAGE[0]), (SCREEN_WIDTH * SCREEN_HEIGHT * 2) as uint);
+   }
 }
 
 
