@@ -42,8 +42,9 @@ static _RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: c_uint = 10;
 
 static SCREEN_WIDTH: c_uint = 320;
 static SCREEN_HEIGHT: c_uint = 240;
-static FPS: f64 = 120.0;
-static SAMPLE_RATE: f64 = 44100.0;
+static FPS: f64 = 60.0;
+static SAMPLE_RATE: f64 = 48000.0;
+
 static ASPECT_RATIO: f32 = 1.0;
 
 #[no_mangle]
@@ -128,10 +129,11 @@ fn print_message()
 		}
 		println!("I am running in a different thread!");
 		unsafe {
-		    let _guard = QUIT.lock();
+		   let _guard = QUIT.lock();
 			if QUIT_FLAG {break};
 		}
 	}
+   println!("QUIT_DONE_FLAG set");
 	unsafe {
 		QUIT_DONE_FLAG = true;
 	}
@@ -171,20 +173,23 @@ pub unsafe extern fn retro_deinit()
 	println!("hello world: retro_deinit");
 	libc::free(frame_buf);
 
-	{
-		let guard = WAIT.lock();
-		guard.signal();
-	}
-	{
-	    let _guard = QUIT.lock();
-		QUIT_FLAG = true;
-	}
-
-	// Rust's native concurrency library is still experimental and incomplete
+   // Rust's native concurrency library is still experimental and incomplete
 	// Spinlock for now
 	let mut spinlock_quit = false;
 	while !spinlock_quit
 	{
+   	{
+         println!("Acquiring WAIT lock");
+   		let guard = WAIT.lock();
+         println!("Signalling WAIT lock");
+   		guard.signal();
+   	}
+   	{
+         println!("Acquiring QUIT lock");
+   	   let _guard = QUIT.lock();
+         println!("Setting QUIT flag");
+   		QUIT_FLAG = true;
+   	}
 	    spinlock_quit = QUIT_DONE_FLAG;
 	}
 	WAIT.destroy();
@@ -194,20 +199,71 @@ pub unsafe extern fn retro_deinit()
 
 struct GState
 {
-	frame: uint
+	frame: uint,
+   internal_frameskip: u8,
+   video_latency: u8,
+   x: u8,
+   y: u8,  
 }
 
-
-static mut g_state: GState = GState{frame: 0};
+static mut g_state: GState = 
+GState
+{
+   frame: 0,
+   internal_frameskip: 0,
+   video_latency: 0,
+   x: 0,
+   y: 0
+};
 
 #[no_mangle]
 pub extern fn retro_run()
 {
+	unsafe {
+		retro_input_poll_cb.unwrap()();
+   }
+   
+   const RETRO_DEVICE_JOYPAD:       libc::c_uint = 1;
+   const RETRO_DEVICE_ID_JOYPAD_UP:       libc::c_uint = 4;
+   const RETRO_DEVICE_ID_JOYPAD_DOWN:     libc::c_uint = 5;
+   const RETRO_DEVICE_ID_JOYPAD_LEFT:     libc::c_uint = 6;
+   const RETRO_DEVICE_ID_JOYPAD_RIGHT:    libc::c_uint = 7;
+   
+   let up = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)};
+   let right = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)};
+   let down = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)};
+   let left = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)};
+  
 	let mut state = unsafe {std::c_vec::CVec::<GState>::new(transmute(&g_state), 1)};
 	
 	let g = &mut state.as_mut_slice()[0];
 
-	g.frame = g.frame + 1;	
+	g.frame = g.frame + 1;
+   
+   if (up == 1) && (g.y > 0)
+   {
+      g.y = g.y - 1;
+   }
+   
+   if (down == 1) && ((g.y as u32) < SCREEN_HEIGHT)
+   {
+      g.y = g.y + 1;
+   }
+
+   if (left == 1) && (g.x > 0)
+   {
+      g.x = g.x - 1;
+   }
+
+   if (right == 1) && ((g.x as u32) < SCREEN_WIDTH)
+   {
+      g.x = g.x + 1;
+
+   println!("{} {}", g.x, (g.x as u32) < SCREEN_WIDTH);
+
+   }
+
+   unsafe {write_pixel(g.x, g.y);}
 
 	if g.frame % 60 == 0
 	{
@@ -217,11 +273,15 @@ pub extern fn retro_run()
 		}
 	}
 
-	unsafe
-	{
-		retro_input_poll_cb.unwrap()();
+   unsafe {
 		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * 2);
 	}
 }
 
+unsafe fn write_pixel(x: u8, y: u8)
+{
+   let mut owned_buf = std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint);
+   let px = &mut owned_buf.as_mut_slice()[x as uint + y as uint * SCREEN_WIDTH as uint];
+   *px = 0xffff;   
 
+}
