@@ -202,8 +202,8 @@ struct GState
 	frame: uint,
    internal_frameskip: u8,
    video_latency: u8,
-   x: u8,
-   y: u8,  
+   x: u32,
+   y: u32,  
 }
 
 static mut g_state: GState = 
@@ -245,7 +245,7 @@ pub extern fn retro_run()
       g.y = g.y - 1;
    }
    
-   if (down == 1) && ((g.y as u32) < SCREEN_HEIGHT)
+   if (down == 1) && ((g.y) < (SCREEN_HEIGHT - 1))
    {
       g.y = g.y + 1;
    }
@@ -255,11 +255,10 @@ pub extern fn retro_run()
       g.x = g.x - 1;
    }
 
-   if (right == 1) && ((g.x as u32) < SCREEN_WIDTH)
+   if (right == 1) && ((g.x) < (SCREEN_WIDTH - 1))
    {
       g.x = g.x + 1;
 
-   println!("{} {}", g.x, (g.x as u32) < SCREEN_WIDTH);
 
    }
 
@@ -278,7 +277,7 @@ pub extern fn retro_run()
 	}
 }
 
-unsafe fn write_pixel(x: u8, y: u8)
+unsafe fn write_pixel(x: u32, y: u32)
 {
    let mut owned_buf = std::c_vec::CVec::<u16>::new(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint);
    let px = &mut owned_buf.as_mut_slice()[x as uint + y as uint * SCREEN_WIDTH as uint];
