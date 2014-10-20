@@ -186,7 +186,8 @@ struct GState
 {
 	frame: uint,
    x: u32,
-   y: u32,  
+   y: u32,
+   phase: f32,
 }
 
 static mut g_state: GState =
@@ -194,7 +195,8 @@ GState
 {
    frame: 0,
    x: 0,
-   y: 0
+   y: 0,
+   phase: 0.0
 };
 
 unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
@@ -206,14 +208,28 @@ unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T]
 pub extern fn retro_run()
 {
    let closure = ||{retro_run_checked()};
-   unsafe {if std::rt::unwind::try(closure).is_err() {println!("caught error");}}
+
+retro_run_checked();
+
+/*   let check = std::rt::unwind::try(closure);
+
+   match check
+   {
+      Err(e) => {
+         println!("Caught error: {}", e);
+      }
+      _ => {}
+   }      
+*/
 }
 
 fn retro_run_checked()
 {
-   unsafe {
-		retro_input_poll_cb.unwrap()();
-   }
+   // TODO how to combine this into one statement?
+   let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
+   let g = &mut g_tmp[0];
+
+   unsafe {retro_input_poll_cb.unwrap()();}
    
    const RETRO_DEVICE_JOYPAD:             libc::c_uint = 1;
    const RETRO_DEVICE_ID_JOYPAD_UP:       libc::c_uint = 4;
@@ -233,13 +249,11 @@ fn retro_run_checked()
    // trigger an bounds check failure for testing
    if b == 1 {let mut oob: [u8, ..1]; oob[1]=0;}
 
-   // TODO how to combine this into one statement?
-   let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
-   let g = &mut g_tmp[0];
-
    let mut audio_buffer: [u16, ..800] = [0u16, ..800];
-
-   if a == 1 { render_audio(audio_buffer);}
+   
+   if a == 1 { 
+      render_audio(&mut audio_buffer, 100000.0, &mut g.phase);
+   }
 
 	g.frame = g.frame + 1;
    
@@ -274,17 +288,18 @@ fn retro_run_checked()
 	}
 
    unsafe {
+      retro_audio_sample_batch_cb.unwrap()(transmute(&audio_buffer), 400);
 		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * 2);
 	}
 }
 
-fn render_audio(mut buffer: [u16, ..800])
+fn render_audio(buffer: &mut[u16, ..800], vol: f32, phase: &mut f32)
 {
    let mut sample: uint = 0;
    for mut i in buffer.iter_mut()
    {
-         sample = sample + 1;
-         *i = (std::num::FloatMath::sin((sample as f32) / 100.0)/2.0 + 0.5) as u16;
+         *phase = *phase + 0.001;
+         *i = ((*phase - (*phase).floor()) * vol) as u16;
    }
 }
 
