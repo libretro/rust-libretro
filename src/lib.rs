@@ -207,24 +207,6 @@ unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T]
 #[no_mangle]
 pub extern fn retro_run()
 {
-   let closure = ||{retro_run_checked()};
-
-retro_run_checked();
-
-/*   let check = std::rt::unwind::try(closure);
-
-   match check
-   {
-      Err(e) => {
-         println!("Caught error: {}", e);
-      }
-      _ => {}
-   }      
-*/
-}
-
-fn retro_run_checked()
-{
    // TODO how to combine this into one statement?
    let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
    let g = &mut g_tmp[0];
@@ -277,6 +259,7 @@ fn retro_run_checked()
       g.x = g.x + 1;
    }
 
+   image_loader();
    write_pixel(g.x, g.y);
 
 	if g.frame % 60 == 0
