@@ -16,10 +16,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#![no_std]
+//#![no_std]
 #![crate_type = "dylib"]
 #![feature(globs)]
-
+//#![feature(lang_items)]
+//#![feature(asm)]
 extern crate libc;
 extern crate rlibc;
 extern crate rustrt;
@@ -188,14 +189,13 @@ struct GState
    y: u32,  
 }
 
-static mut g_state: GState = 
+static mut g_state: GState =
 GState
 {
    frame: 0,
    x: 0,
    y: 0
 };
-
 
 unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
 {
@@ -205,32 +205,49 @@ unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T]
 #[no_mangle]
 pub extern fn retro_run()
 {
-	unsafe {
+   let closure = ||{retro_run_checked()};
+   unsafe {if std::rt::unwind::try(closure).is_err() {println!("caught error");}}
+}
+
+fn retro_run_checked()
+{
+   unsafe {
 		retro_input_poll_cb.unwrap()();
    }
    
-   const RETRO_DEVICE_JOYPAD:       libc::c_uint = 1;
+   const RETRO_DEVICE_JOYPAD:             libc::c_uint = 1;
    const RETRO_DEVICE_ID_JOYPAD_UP:       libc::c_uint = 4;
    const RETRO_DEVICE_ID_JOYPAD_DOWN:     libc::c_uint = 5;
    const RETRO_DEVICE_ID_JOYPAD_LEFT:     libc::c_uint = 6;
    const RETRO_DEVICE_ID_JOYPAD_RIGHT:    libc::c_uint = 7;
+   const RETRO_DEVICE_ID_JOYPAD_A:        libc::c_uint = 8;
+   const RETRO_DEVICE_ID_JOYPAD_B:        libc::c_uint = 0;
    
    let up = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)};
    let right = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)};
    let down = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)};
    let left = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)};
+   let a = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A)};
+   let b = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)};
 
-// TODO how to combine this into one statement?
+   // trigger an bounds check failure for testing
+   if b == 1 {let mut oob: [u8, ..1]; oob[1]=0;}
+
+   // TODO how to combine this into one statement?
    let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
    let g = &mut g_tmp[0];
- 
+
+   let mut audio_buffer: [u16, ..800] = [0u16, ..800];
+
+   if a == 1 { render_audio(audio_buffer);}
+
 	g.frame = g.frame + 1;
    
    if (up == 1) && (g.y > 0)
    {
       g.y = g.y - 1;
    }
-   
+
    if (down == 1) && ((g.y) < (SCREEN_HEIGHT - 1))
    {
       g.y = g.y + 1;
@@ -244,8 +261,6 @@ pub extern fn retro_run()
    if (right == 1) && ((g.x) < (SCREEN_WIDTH - 1))
    {
       g.x = g.x + 1;
-
-
    }
 
    write_pixel(g.x, g.y);
@@ -261,6 +276,16 @@ pub extern fn retro_run()
    unsafe {
 		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * 2);
 	}
+}
+
+fn render_audio(mut buffer: [u16, ..800])
+{
+   let mut sample: uint = 0;
+   for mut i in buffer.iter_mut()
+   {
+         sample = sample + 1;
+         *i = (std::num::FloatMath::sin((sample as f32) / 100.0)/2.0 + 0.5) as u16;
+   }
 }
 
 fn write_pixel(x: u32, y: u32)
