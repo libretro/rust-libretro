@@ -187,7 +187,7 @@ struct GState
 	frame: uint,
    x: u32,
    y: u32,
-   phase: f32,
+   phase: f32
 }
 
 static mut g_state: GState =
@@ -226,10 +226,10 @@ pub extern fn retro_run()
    let down = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)};
    let left = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)};
    let a = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A)};
-   let b = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)};
+   let _b = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)};
 
    // trigger an bounds check failure for testing
-   if b == 1 {let mut oob: [u8, ..1]; oob[1]=0;}
+   // if b == 1 {let mut oob: [u8, ..1]; oob[1]=0;}
 
    let mut audio_buffer: [u16, ..800] = [0u16, ..800];
    
@@ -278,7 +278,6 @@ pub extern fn retro_run()
 
 fn render_audio(buffer: &mut[u16, ..800], vol: f32, phase: &mut f32)
 {
-   let mut sample: uint = 0;
    for mut i in buffer.iter_mut()
    {
          *phase = *phase + 0.001;
