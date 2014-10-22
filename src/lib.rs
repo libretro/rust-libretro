@@ -74,9 +74,9 @@ pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
 	// println!("hello world: retro_get_system_info");
 	rlibc::memset(transmute(info), 0, size_of::<retro_system_info>());
 
-	(*info).library_name     = "Hello World".to_c_str().as_ptr();  // Rust strings are not null terminated
-	(*info).library_version  = "0.0.1".to_c_str().as_ptr();        // Null terminate manually
-	(*info).valid_extensions = "".to_c_str().as_ptr();
+	(*info).library_name     = "Hello World\0".as_ptr() as *const i8;  // Rust strings are not null terminated
+	(*info).library_version  = "0.0.1\0".as_ptr() as *const i8;        // Null terminate manually
+	(*info).valid_extensions = " \0".as_ptr() as *const i8;
 	(*info).need_fullpath    = false as u8;
 	(*info).block_extract    = false as u8;
 }
