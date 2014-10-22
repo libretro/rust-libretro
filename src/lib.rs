@@ -35,7 +35,7 @@ use core::prelude::*;
 use core::intrinsics::transmute;
 use core::mem::size_of;
 
-pub mod rust_libretro;
+pub mod rust_wrapper;
 
 static NO_CONTENT: bool = true;
 static _RETRO_PIXEL_FORMAT_RGB1555: u32 = 0;

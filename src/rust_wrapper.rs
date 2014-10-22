@@ -4,7 +4,7 @@ use libc::c_uint;
 use libc::types::os::arch::c95::size_t;
 
 use c_libretro::*;
-pub mod c_libretro;
+pub mod c_header;
 
 
 
