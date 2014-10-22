@@ -27,8 +27,11 @@
 extern crate libc;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::size_t;
+use libc::types::os::arch::c95::c_char;
+use libc::c_uint;
+use libc::c_int;
 
-pub const RETRO_API_VERSION:         ::libc::c_uint = 1;
+pub const RETRO_API_VERSION:         c_uint = 1;
 
 /*
  * Libretro's fundamental device abstractions.
@@ -44,8 +47,8 @@ pub const RETRO_API_VERSION:         ::libc::c_uint = 1;
  * correctly to arbitrary controller layouts.
  */
 
-pub const RETRO_DEVICE_TYPE_SHIFT:         ::libc::c_uint = 8;
-pub const RETRO_DEVICE_MASK:               ::libc::c_uint = ((1 << RETRO_DEVICE_TYPE_SHIFT as uint) - 1);
+pub const RETRO_DEVICE_TYPE_SHIFT:         c_uint = 8;
+pub const RETRO_DEVICE_MASK:               c_uint = ((1 << RETRO_DEVICE_TYPE_SHIFT as uint) - 1);
 macro_rules! RETRO_DEVICE_SUBCLASS(
    ($base:expr, $id:expr) => (
       (((id + 1) << RETRO_DEVICE_TYPE_SHIFT) | base)
@@ -53,12 +56,12 @@ macro_rules! RETRO_DEVICE_SUBCLASS(
 )
 
 /* Input disabled. */
-pub const RETRO_DEVICE_NONE:         ::libc::c_uint = 0;
+pub const RETRO_DEVICE_NONE:         c_uint = 0;
 
 /* The JOYPAD is called RetroPad. It is essentially a Super Nintendo 
  * controller, but with additional L2/R2/L3/R3 buttons, similar to a 
  * PS1 DualShock. */
-pub const RETRO_DEVICE_JOYPAD:       ::libc::c_uint = 1;
+pub const RETRO_DEVICE_JOYPAD:       c_uint = 1;
 
 /* The mouse is a simple mouse, similar to Super Nintendo's mouse.
  * X and Y coordinates are reported relatively to last poll (poll callback).
@@ -67,7 +70,7 @@ pub const RETRO_DEVICE_JOYPAD:       ::libc::c_uint = 1;
  * The frontend must make sure not to interfere with its own hardware 
  * mouse pointer.
  */
-pub const RETRO_DEVICE_MOUSE:        ::libc::c_uint = 2;
+pub const RETRO_DEVICE_MOUSE:        c_uint = 2;
 
 /* KEYBOARD device lets one poll for raw key pressed.
  * It is poll based, so input callback will return with the current 
@@ -75,11 +78,11 @@ pub const RETRO_DEVICE_MOUSE:        ::libc::c_uint = 2;
  * For event/text based keyboard input, see
  * RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK.
  */
-pub const RETRO_DEVICE_KEYBOARD:     ::libc::c_uint = 3;
+pub const RETRO_DEVICE_KEYBOARD:     c_uint = 3;
 
 /* Lightgun X/Y coordinates are reported relatively to last poll,
  * similar to mouse. */
-pub const RETRO_DEVICE_LIGHTGUN:     ::libc::c_uint = 4;
+pub const RETRO_DEVICE_LIGHTGUN:     c_uint = 4;
 
 /* The ANALOG device is an extension to JOYPAD (RetroPad).
  * Similar to DualShock it adds two analog sticks.
@@ -88,7 +91,7 @@ pub const RETRO_DEVICE_LIGHTGUN:     ::libc::c_uint = 4;
  * Positive Y axis is down.
  * Only use ANALOG type when polling for analog values of the axes.
  */
-pub const RETRO_DEVICE_ANALOG:       ::libc::c_uint = 5;
+pub const RETRO_DEVICE_ANALOG:       c_uint = 5;
 
 /* Abstracts the concept of a pointing mechanism, e.g. touch.
  * This allows libretro to query in absolute coordinates where on the 
@@ -120,311 +123,310 @@ pub const RETRO_DEVICE_ANALOG:       ::libc::c_uint = 5;
  * index = 1, and so on.
  * Eventually _PRESSED will return false for an index. No further presses 
  * are registered at this point. */
-pub const RETRO_DEVICE_POINTER:      ::libc::c_uint = 6;
+pub const RETRO_DEVICE_POINTER:      c_uint = 6;
 
 /* Buttons for the RetroPad (JOYPAD).
  * The placement of these is equivalent to placements on the 
  * Super Nintendo controller.
  * L2/R2/L3/R3 buttons correspond to the PS1 DualShock. */
-pub const RETRO_DEVICE_ID_JOYPAD_B:        ::libc::c_uint = 0;
-pub const RETRO_DEVICE_ID_JOYPAD_Y:        ::libc::c_uint = 1;
-pub const RETRO_DEVICE_ID_JOYPAD_SELECT:   ::libc::c_uint = 2;
-pub const RETRO_DEVICE_ID_JOYPAD_START:    ::libc::c_uint = 3;
-pub const RETRO_DEVICE_ID_JOYPAD_UP:       ::libc::c_uint = 4;
-pub const RETRO_DEVICE_ID_JOYPAD_DOWN:     ::libc::c_uint = 5;
-pub const RETRO_DEVICE_ID_JOYPAD_LEFT:     ::libc::c_uint = 6;
-pub const RETRO_DEVICE_ID_JOYPAD_RIGHT:    ::libc::c_uint = 7;
-pub const RETRO_DEVICE_ID_JOYPAD_A:        ::libc::c_uint = 8;
-pub const RETRO_DEVICE_ID_JOYPAD_X:        ::libc::c_uint = 9;
-pub const RETRO_DEVICE_ID_JOYPAD_L:       ::libc::c_uint = 10;
-pub const RETRO_DEVICE_ID_JOYPAD_R:       ::libc::c_uint = 11;
-pub const RETRO_DEVICE_ID_JOYPAD_L2:      ::libc::c_uint = 12;
-pub const RETRO_DEVICE_ID_JOYPAD_R2:      ::libc::c_uint = 13;
-pub const RETRO_DEVICE_ID_JOYPAD_L3:      ::libc::c_uint = 14;
-pub const RETRO_DEVICE_ID_JOYPAD_R3:      ::libc::c_uint = 15;
+pub const RETRO_DEVICE_ID_JOYPAD_B:         c_uint = 0;
+pub const RETRO_DEVICE_ID_JOYPAD_Y:         c_uint = 1;
+pub const RETRO_DEVICE_ID_JOYPAD_SELECT:    c_uint = 2;
+pub const RETRO_DEVICE_ID_JOYPAD_START:     c_uint = 3;
+pub const RETRO_DEVICE_ID_JOYPAD_UP:        c_uint = 4;
+pub const RETRO_DEVICE_ID_JOYPAD_DOWN:      c_uint = 5;
+pub const RETRO_DEVICE_ID_JOYPAD_LEFT:      c_uint = 6;
+pub const RETRO_DEVICE_ID_JOYPAD_RIGHT:     c_uint = 7;
+pub const RETRO_DEVICE_ID_JOYPAD_A:         c_uint = 8;
+pub const RETRO_DEVICE_ID_JOYPAD_X:         c_uint = 9;
+pub const RETRO_DEVICE_ID_JOYPAD_L:        c_uint = 10;
+pub const RETRO_DEVICE_ID_JOYPAD_R:        c_uint = 11;
+pub const RETRO_DEVICE_ID_JOYPAD_L2:       c_uint = 12;
+pub const RETRO_DEVICE_ID_JOYPAD_R2:       c_uint = 13;
+pub const RETRO_DEVICE_ID_JOYPAD_L3:       c_uint = 14;
+pub const RETRO_DEVICE_ID_JOYPAD_R3:       c_uint = 15;
 
 /* Index / Id values for ANALOG device. */
-pub const RETRO_DEVICE_INDEX_ANALOG_LEFT:   ::libc::c_uint = 0;
-pub const RETRO_DEVICE_INDEX_ANALOG_RIGHT:  ::libc::c_uint = 1;
-pub const RETRO_DEVICE_ID_ANALOG_X:         ::libc::c_uint = 0;
-pub const RETRO_DEVICE_ID_ANALOG_Y:         ::libc::c_uint = 1;
+pub const RETRO_DEVICE_INDEX_ANALOG_LEFT:   c_uint = 0;
+pub const RETRO_DEVICE_INDEX_ANALOG_RIGHT:  c_uint = 1;
+pub const RETRO_DEVICE_ID_ANALOG_X:         c_uint = 0;
+pub const RETRO_DEVICE_ID_ANALOG_Y:         c_uint = 1;
 
 /* Id values for MOUSE. */
-pub const RETRO_DEVICE_ID_MOUSE_X:          ::libc::c_uint = 0;
-pub const RETRO_DEVICE_ID_MOUSE_Y:          ::libc::c_uint = 1;
-pub const RETRO_DEVICE_ID_MOUSE_LEFT:       ::libc::c_uint = 2;
-pub const RETRO_DEVICE_ID_MOUSE_RIGHT:      ::libc::c_uint = 3;
-pub const RETRO_DEVICE_ID_MOUSE_WHEELUP:    ::libc::c_uint = 4;
-pub const RETRO_DEVICE_ID_MOUSE_WHEELDOWN:  ::libc::c_uint = 5;
-pub const RETRO_DEVICE_ID_MOUSE_MIDDLE:     ::libc::c_uint = 6;
+pub const RETRO_DEVICE_ID_MOUSE_X:          c_uint = 0;
+pub const RETRO_DEVICE_ID_MOUSE_Y:          c_uint = 1;
+pub const RETRO_DEVICE_ID_MOUSE_LEFT:       c_uint = 2;
+pub const RETRO_DEVICE_ID_MOUSE_RIGHT:      c_uint = 3;
+pub const RETRO_DEVICE_ID_MOUSE_WHEELUP:    c_uint = 4;
+pub const RETRO_DEVICE_ID_MOUSE_WHEELDOWN:  c_uint = 5;
+pub const RETRO_DEVICE_ID_MOUSE_MIDDLE:     c_uint = 6;
 
 /* Id values for LIGHTGUN types. */
-pub const RETRO_DEVICE_ID_LIGHTGUN_X:        ::libc::c_uint = 0;
-pub const RETRO_DEVICE_ID_LIGHTGUN_Y:        ::libc::c_uint = 1;
-pub const RETRO_DEVICE_ID_LIGHTGUN_TRIGGER:  ::libc::c_uint = 2;
-pub const RETRO_DEVICE_ID_LIGHTGUN_CURSOR:   ::libc::c_uint = 3;
-pub const RETRO_DEVICE_ID_LIGHTGUN_TURBO:    ::libc::c_uint = 4;
-pub const RETRO_DEVICE_ID_LIGHTGUN_PAUSE:    ::libc::c_uint = 5;
-pub const RETRO_DEVICE_ID_LIGHTGUN_START:    ::libc::c_uint = 6;
+pub const RETRO_DEVICE_ID_LIGHTGUN_X:        c_uint = 0;
+pub const RETRO_DEVICE_ID_LIGHTGUN_Y:        c_uint = 1;
+pub const RETRO_DEVICE_ID_LIGHTGUN_TRIGGER:  c_uint = 2;
+pub const RETRO_DEVICE_ID_LIGHTGUN_CURSOR:   c_uint = 3;
+pub const RETRO_DEVICE_ID_LIGHTGUN_TURBO:    c_uint = 4;
+pub const RETRO_DEVICE_ID_LIGHTGUN_PAUSE:    c_uint = 5;
+pub const RETRO_DEVICE_ID_LIGHTGUN_START:    c_uint = 6;
 
 /* Id values for POINTER. */
-pub const RETRO_DEVICE_ID_POINTER_X:         ::libc::c_uint = 0;
-pub const RETRO_DEVICE_ID_POINTER_Y:         ::libc::c_uint = 1;
-pub const RETRO_DEVICE_ID_POINTER_PRESSED:   ::libc::c_uint = 2;
+pub const RETRO_DEVICE_ID_POINTER_X:         c_uint = 0;
+pub const RETRO_DEVICE_ID_POINTER_Y:         c_uint = 1;
+pub const RETRO_DEVICE_ID_POINTER_PRESSED:   c_uint = 2;
 
 /* Returned from retro_get_region(). */
-pub const RETRO_REGION_NTSC:  ::libc::c_uint = 0;
-pub const RETRO_REGION_PAL:   ::libc::c_uint = 1;
+pub const RETRO_REGION_NTSC:  c_uint = 0;
+pub const RETRO_REGION_PAL:   c_uint = 1;
 
 /* Rust enums are tagged unions and are not compatible with
  * C enums. All enums are converted to lists of constants. */
 // Id values for LANGUAGE
 // enum values from retro_language:
-pub const RETRO_LANGUAGE_ENGLISH:                ::libc::c_int = 0;
-pub const RETRO_LANGUAGE_JAPANESE:               ::libc::c_int = 1;
-pub const RETRO_LANGUAGE_FRENCH:                 ::libc::c_int = 2;
-pub const RETRO_LANGUAGE_SPANISH:                ::libc::c_int = 3;
-pub const RETRO_LANGUAGE_GERMAN:                 ::libc::c_int = 4;
-pub const RETRO_LANGUAGE_ITALIAN:                ::libc::c_int = 5;
-pub const RETRO_LANGUAGE_DUTCH:                  ::libc::c_int = 6;
-pub const RETRO_LANGUAGE_PORTUGUESE:             ::libc::c_int = 7;
-pub const RETRO_LANGUAGE_RUSSIAN:                ::libc::c_int = 8;
-pub const RETRO_LANGUAGE_KOREAN:                 ::libc::c_int = 9;
-pub const RETRO_LANGUAGE_CHINESE_TRADITIONAL:   ::libc::c_int = 10;
-pub const RETRO_LANGUAGE_CHINESE_SIMPLIFIED:    ::libc::c_int = 11;
-pub const RETRO_LANGUAGE_LAST:                  ::libc::c_int = 12;
+pub const RETRO_LANGUAGE_ENGLISH:                c_int = 0;
+pub const RETRO_LANGUAGE_JAPANESE:               c_int = 1;
+pub const RETRO_LANGUAGE_FRENCH:                 c_int = 2;
+pub const RETRO_LANGUAGE_SPANISH:                c_int = 3;
+pub const RETRO_LANGUAGE_GERMAN:                 c_int = 4;
+pub const RETRO_LANGUAGE_ITALIAN:                c_int = 5;
+pub const RETRO_LANGUAGE_DUTCH:                  c_int = 6;
+pub const RETRO_LANGUAGE_PORTUGUESE:             c_int = 7;
+pub const RETRO_LANGUAGE_RUSSIAN:                c_int = 8;
+pub const RETRO_LANGUAGE_KOREAN:                 c_int = 9;
+pub const RETRO_LANGUAGE_CHINESE_TRADITIONAL:   c_int = 10;
+pub const RETRO_LANGUAGE_CHINESE_SIMPLIFIED:    c_int = 11;
+pub const RETRO_LANGUAGE_LAST:                  c_int = 12;
 
 /* Passed to retro_get_memory_data/size().
  * If the memory type doesn't apply to the 
  * implementation NULL/0 can be returned.
  */
-pub const RETRO_MEMORY_MASK:        ::libc::c_uint = 0xff;
+pub const RETRO_MEMORY_MASK:        c_uint = 0xff;
 
 /* Regular save RAM. This RAM is usually found on a game cartridge,
  * backed up by a battery.
  * If save game data is too complex for a single memory buffer,
  * the SAVE_DIRECTORY (preferably) or SYSTEM_DIRECTORY environment
  * callback can be used. */
-pub const RETRO_MEMORY_SAVE_RAM:    ::libc::c_uint = 0;
+pub const RETRO_MEMORY_SAVE_RAM:    c_uint = 0;
 
 /* Some games have a built-in clock to keep track of time.
  * This memory is usually just a couple of bytes to keep track of time.
  */
-pub const RETRO_MEMORY_RTC:         ::libc::c_uint = 1;
+pub const RETRO_MEMORY_RTC:         c_uint = 1;
 
 /* System ram lets a frontend peek into a game systems main RAM. */
-pub const RETRO_MEMORY_SYSTEM_RAM:  ::libc::c_uint = 2;
+pub const RETRO_MEMORY_SYSTEM_RAM:  c_uint = 2;
 
 /* Video ram lets a frontend peek into a game systems video RAM (VRAM). */
-pub const RETRO_MEMORY_VIDEO_RAM:   ::libc::c_uint = 3;
-
+pub const RETRO_MEMORY_VIDEO_RAM:   c_uint = 3;
 
 /* Keysyms used for ID in input state callback when polling RETRO_KEYBOARD. */
 // enum values from retro_key:
-pub const RETROK_UNKNOWN:        ::libc::c_int = 0;
-pub const RETROK_FIRST:          ::libc::c_int = 0;
-pub const RETROK_BACKSPACE:      ::libc::c_int = 8;
-pub const RETROK_TAB:            ::libc::c_int = 9;
-pub const RETROK_CLEAR:          ::libc::c_int = 12;
-pub const RETROK_RETURN:         ::libc::c_int = 13;
-pub const RETROK_PAUSE:          ::libc::c_int = 19;
-pub const RETROK_ESCAPE:         ::libc::c_int = 27;
-pub const RETROK_SPACE:          ::libc::c_int = 32;
-pub const RETROK_EXCLAIM:        ::libc::c_int = 33;
-pub const RETROK_QUOTEDBL:       ::libc::c_int = 34;
-pub const RETROK_HASH:           ::libc::c_int = 35;
-pub const RETROK_DOLLAR:         ::libc::c_int = 36;
-pub const RETROK_AMPERSAND:      ::libc::c_int = 38;
-pub const RETROK_QUOTE:          ::libc::c_int = 39;
-pub const RETROK_LEFTPAREN:      ::libc::c_int = 40;
-pub const RETROK_RIGHTPAREN:     ::libc::c_int = 41;
-pub const RETROK_ASTERISK:       ::libc::c_int = 42;
-pub const RETROK_PLUS:           ::libc::c_int = 43;
-pub const RETROK_COMMA:          ::libc::c_int = 44;
-pub const RETROK_MINUS:          ::libc::c_int = 45;
-pub const RETROK_PERIOD:         ::libc::c_int = 46;
-pub const RETROK_SLASH:          ::libc::c_int = 47;
-pub const RETROK_0:              ::libc::c_int = 48;
-pub const RETROK_1:              ::libc::c_int = 49;
-pub const RETROK_2:              ::libc::c_int = 50;
-pub const RETROK_3:              ::libc::c_int = 51;
-pub const RETROK_4:              ::libc::c_int = 52;
-pub const RETROK_5:              ::libc::c_int = 53;
-pub const RETROK_6:              ::libc::c_int = 54;
-pub const RETROK_7:              ::libc::c_int = 55;
-pub const RETROK_8:              ::libc::c_int = 56;
-pub const RETROK_9:              ::libc::c_int = 57;
-pub const RETROK_COLON:          ::libc::c_int = 58;
-pub const RETROK_SEMICOLON:      ::libc::c_int = 59;
-pub const RETROK_LESS:           ::libc::c_int = 60;
-pub const RETROK_EQUALS:         ::libc::c_int = 61;
-pub const RETROK_GREATER:        ::libc::c_int = 62;
-pub const RETROK_QUESTION:       ::libc::c_int = 63;
-pub const RETROK_AT:             ::libc::c_int = 64;
-pub const RETROK_LEFTBRACKET:    ::libc::c_int = 91;
-pub const RETROK_BACKSLASH:      ::libc::c_int = 92;
-pub const RETROK_RIGHTBRACKET:   ::libc::c_int = 93;
-pub const RETROK_CARET:          ::libc::c_int = 94;
-pub const RETROK_UNDERSCORE:     ::libc::c_int = 95;
-pub const RETROK_BACKQUOTE:      ::libc::c_int = 96;
+pub const RETROK_UNKNOWN:        c_int = 0;
+pub const RETROK_FIRST:          c_int = 0;
+pub const RETROK_BACKSPACE:      c_int = 8;
+pub const RETROK_TAB:            c_int = 9;
+pub const RETROK_CLEAR:          c_int = 12;
+pub const RETROK_RETURN:         c_int = 13;
+pub const RETROK_PAUSE:          c_int = 19;
+pub const RETROK_ESCAPE:         c_int = 27;
+pub const RETROK_SPACE:          c_int = 32;
+pub const RETROK_EXCLAIM:        c_int = 33;
+pub const RETROK_QUOTEDBL:       c_int = 34;
+pub const RETROK_HASH:           c_int = 35;
+pub const RETROK_DOLLAR:         c_int = 36;
+pub const RETROK_AMPERSAND:      c_int = 38;
+pub const RETROK_QUOTE:          c_int = 39;
+pub const RETROK_LEFTPAREN:      c_int = 40;
+pub const RETROK_RIGHTPAREN:     c_int = 41;
+pub const RETROK_ASTERISK:       c_int = 42;
+pub const RETROK_PLUS:           c_int = 43;
+pub const RETROK_COMMA:          c_int = 44;
+pub const RETROK_MINUS:          c_int = 45;
+pub const RETROK_PERIOD:         c_int = 46;
+pub const RETROK_SLASH:          c_int = 47;
+pub const RETROK_0:              c_int = 48;
+pub const RETROK_1:              c_int = 49;
+pub const RETROK_2:              c_int = 50;
+pub const RETROK_3:              c_int = 51;
+pub const RETROK_4:              c_int = 52;
+pub const RETROK_5:              c_int = 53;
+pub const RETROK_6:              c_int = 54;
+pub const RETROK_7:              c_int = 55;
+pub const RETROK_8:              c_int = 56;
+pub const RETROK_9:              c_int = 57;
+pub const RETROK_COLON:          c_int = 58;
+pub const RETROK_SEMICOLON:      c_int = 59;
+pub const RETROK_LESS:           c_int = 60;
+pub const RETROK_EQUALS:         c_int = 61;
+pub const RETROK_GREATER:        c_int = 62;
+pub const RETROK_QUESTION:       c_int = 63;
+pub const RETROK_AT:             c_int = 64;
+pub const RETROK_LEFTBRACKET:    c_int = 91;
+pub const RETROK_BACKSLASH:      c_int = 92;
+pub const RETROK_RIGHTBRACKET:   c_int = 93;
+pub const RETROK_CARET:          c_int = 94;
+pub const RETROK_UNDERSCORE:     c_int = 95;
+pub const RETROK_BACKQUOTE:      c_int = 96;
 #[allow(non_upper_case_globals)]
-pub const RETROK_a:              ::libc::c_int = 97;
+pub const RETROK_a:              c_int = 97;
 #[allow(non_upper_case_globals)]
-pub const RETROK_b:              ::libc::c_int = 98;
+pub const RETROK_b:              c_int = 98;
 #[allow(non_upper_case_globals)]
-pub const RETROK_c:              ::libc::c_int = 99;
+pub const RETROK_c:              c_int = 99;
 #[allow(non_upper_case_globals)]
-pub const RETROK_d:              ::libc::c_int = 100;
+pub const RETROK_d:              c_int = 100;
 #[allow(non_upper_case_globals)]
-pub const RETROK_e:              ::libc::c_int = 101;
+pub const RETROK_e:              c_int = 101;
 #[allow(non_upper_case_globals)]
-pub const RETROK_f:              ::libc::c_int = 102;
+pub const RETROK_f:              c_int = 102;
 #[allow(non_upper_case_globals)]
-pub const RETROK_g:              ::libc::c_int = 103;
+pub const RETROK_g:              c_int = 103;
 #[allow(non_upper_case_globals)]
-pub const RETROK_h:              ::libc::c_int = 104;
+pub const RETROK_h:              c_int = 104;
 #[allow(non_upper_case_globals)]
-pub const RETROK_i:              ::libc::c_int = 105;
+pub const RETROK_i:              c_int = 105;
 #[allow(non_upper_case_globals)]
-pub const RETROK_j:              ::libc::c_int = 106;
+pub const RETROK_j:              c_int = 106;
 #[allow(non_upper_case_globals)]
-pub const RETROK_k:              ::libc::c_int = 107;
+pub const RETROK_k:              c_int = 107;
 #[allow(non_upper_case_globals)]
-pub const RETROK_l:              ::libc::c_int = 108;
+pub const RETROK_l:              c_int = 108;
 #[allow(non_upper_case_globals)]
-pub const RETROK_m:              ::libc::c_int = 109;
+pub const RETROK_m:              c_int = 109;
 #[allow(non_upper_case_globals)]
-pub const RETROK_n:              ::libc::c_int = 110;
+pub const RETROK_n:              c_int = 110;
 #[allow(non_upper_case_globals)]
-pub const RETROK_o:              ::libc::c_int = 111;
+pub const RETROK_o:              c_int = 111;
 #[allow(non_upper_case_globals)]
-pub const RETROK_p:              ::libc::c_int = 112;
+pub const RETROK_p:              c_int = 112;
 #[allow(non_upper_case_globals)]
-pub const RETROK_q:              ::libc::c_int = 113;
+pub const RETROK_q:              c_int = 113;
 #[allow(non_upper_case_globals)]
-pub const RETROK_r:              ::libc::c_int = 114;
+pub const RETROK_r:              c_int = 114;
 #[allow(non_upper_case_globals)]
-pub const RETROK_s:              ::libc::c_int = 115;
+pub const RETROK_s:              c_int = 115;
 #[allow(non_upper_case_globals)]
-pub const RETROK_t:              ::libc::c_int = 116;
+pub const RETROK_t:              c_int = 116;
 #[allow(non_upper_case_globals)]
-pub const RETROK_u:              ::libc::c_int = 117;
+pub const RETROK_u:              c_int = 117;
 #[allow(non_upper_case_globals)]
-pub const RETROK_v:              ::libc::c_int = 118;
+pub const RETROK_v:              c_int = 118;
 #[allow(non_upper_case_globals)]
-pub const RETROK_w:              ::libc::c_int = 119;
+pub const RETROK_w:              c_int = 119;
 #[allow(non_upper_case_globals)]
-pub const RETROK_x:              ::libc::c_int = 120;
+pub const RETROK_x:              c_int = 120;
 #[allow(non_upper_case_globals)]
-pub const RETROK_y:              ::libc::c_int = 121;
+pub const RETROK_y:              c_int = 121;
 #[allow(non_upper_case_globals)]
-pub const RETROK_z:              ::libc::c_int = 122;
-pub const RETROK_DELETE:         ::libc::c_int = 127;
+pub const RETROK_z:              c_int = 122;
+pub const RETROK_DELETE:         c_int = 127;
 
-pub const RETROK_KP0:            ::libc::c_int = 256;
-pub const RETROK_KP1:            ::libc::c_int = 257;
-pub const RETROK_KP2:            ::libc::c_int = 258;
-pub const RETROK_KP3:            ::libc::c_int = 259;
-pub const RETROK_KP4:            ::libc::c_int = 260;
-pub const RETROK_KP5:            ::libc::c_int = 261;
-pub const RETROK_KP6:            ::libc::c_int = 262;
-pub const RETROK_KP7:            ::libc::c_int = 263;
-pub const RETROK_KP8:            ::libc::c_int = 264;
-pub const RETROK_KP9:            ::libc::c_int = 265;
-pub const RETROK_KP_PERIOD:      ::libc::c_int = 266;
-pub const RETROK_KP_DIVIDE:      ::libc::c_int = 267;
-pub const RETROK_KP_MULTIPLY:    ::libc::c_int = 268;
-pub const RETROK_KP_MINUS:       ::libc::c_int = 269;
-pub const RETROK_KP_PLUS:        ::libc::c_int = 270;
-pub const RETROK_KP_ENTER:       ::libc::c_int = 271;
-pub const RETROK_KP_EQUALS:      ::libc::c_int = 272;
+pub const RETROK_KP0:            c_int = 256;
+pub const RETROK_KP1:            c_int = 257;
+pub const RETROK_KP2:            c_int = 258;
+pub const RETROK_KP3:            c_int = 259;
+pub const RETROK_KP4:            c_int = 260;
+pub const RETROK_KP5:            c_int = 261;
+pub const RETROK_KP6:            c_int = 262;
+pub const RETROK_KP7:            c_int = 263;
+pub const RETROK_KP8:            c_int = 264;
+pub const RETROK_KP9:            c_int = 265;
+pub const RETROK_KP_PERIOD:      c_int = 266;
+pub const RETROK_KP_DIVIDE:      c_int = 267;
+pub const RETROK_KP_MULTIPLY:    c_int = 268;
+pub const RETROK_KP_MINUS:       c_int = 269;
+pub const RETROK_KP_PLUS:        c_int = 270;
+pub const RETROK_KP_ENTER:       c_int = 271;
+pub const RETROK_KP_EQUALS:      c_int = 272;
 
-pub const RETROK_UP:             ::libc::c_int = 273;
-pub const RETROK_DOWN:           ::libc::c_int = 274;
-pub const RETROK_RIGHT:          ::libc::c_int = 275;
-pub const RETROK_LEFT:           ::libc::c_int = 276;
-pub const RETROK_INSERT:         ::libc::c_int = 277;
-pub const RETROK_HOME:           ::libc::c_int = 278;
-pub const RETROK_END:            ::libc::c_int = 279;
-pub const RETROK_PAGEUP:         ::libc::c_int = 280;
-pub const RETROK_PAGEDOWN:       ::libc::c_int = 281;
+pub const RETROK_UP:             c_int = 273;
+pub const RETROK_DOWN:           c_int = 274;
+pub const RETROK_RIGHT:          c_int = 275;
+pub const RETROK_LEFT:           c_int = 276;
+pub const RETROK_INSERT:         c_int = 277;
+pub const RETROK_HOME:           c_int = 278;
+pub const RETROK_END:            c_int = 279;
+pub const RETROK_PAGEUP:         c_int = 280;
+pub const RETROK_PAGEDOWN:       c_int = 281;
 
-pub const RETROK_F1:             ::libc::c_int = 282;
-pub const RETROK_F2:             ::libc::c_int = 283;
-pub const RETROK_F3:             ::libc::c_int = 284;
-pub const RETROK_F4:             ::libc::c_int = 285;
-pub const RETROK_F5:             ::libc::c_int = 286;
-pub const RETROK_F6:             ::libc::c_int = 287;
-pub const RETROK_F7:             ::libc::c_int = 288;
-pub const RETROK_F8:             ::libc::c_int = 289;
-pub const RETROK_F9:             ::libc::c_int = 290;
-pub const RETROK_F10:            ::libc::c_int = 291;
-pub const RETROK_F11:            ::libc::c_int = 292;
-pub const RETROK_F12:            ::libc::c_int = 293;
-pub const RETROK_F13:            ::libc::c_int = 294;
-pub const RETROK_F14:            ::libc::c_int = 295;
-pub const RETROK_F15:            ::libc::c_int = 296;
+pub const RETROK_F1:             c_int = 282;
+pub const RETROK_F2:             c_int = 283;
+pub const RETROK_F3:             c_int = 284;
+pub const RETROK_F4:             c_int = 285;
+pub const RETROK_F5:             c_int = 286;
+pub const RETROK_F6:             c_int = 287;
+pub const RETROK_F7:             c_int = 288;
+pub const RETROK_F8:             c_int = 289;
+pub const RETROK_F9:             c_int = 290;
+pub const RETROK_F10:            c_int = 291;
+pub const RETROK_F11:            c_int = 292;
+pub const RETROK_F12:            c_int = 293;
+pub const RETROK_F13:            c_int = 294;
+pub const RETROK_F14:            c_int = 295;
+pub const RETROK_F15:            c_int = 296;
 
-pub const RETROK_NUMLOCK:        ::libc::c_int = 300;
-pub const RETROK_CAPSLOCK:       ::libc::c_int = 301;
-pub const RETROK_SCROLLOCK:      ::libc::c_int = 302;
-pub const RETROK_RSHIFT:         ::libc::c_int = 303;
-pub const RETROK_LSHIFT:         ::libc::c_int = 304;
-pub const RETROK_RCTRL:          ::libc::c_int = 305;
-pub const RETROK_LCTRL:          ::libc::c_int = 306;
-pub const RETROK_RALT:           ::libc::c_int = 307;
-pub const RETROK_LALT:           ::libc::c_int = 308;
-pub const RETROK_RMETA:          ::libc::c_int = 309;
-pub const RETROK_LMETA:          ::libc::c_int = 310;
-pub const RETROK_LSUPER:         ::libc::c_int = 311;
-pub const RETROK_RSUPER:         ::libc::c_int = 312;
-pub const RETROK_MODE:           ::libc::c_int = 313;
-pub const RETROK_COMPOSE:        ::libc::c_int = 314;
+pub const RETROK_NUMLOCK:        c_int = 300;
+pub const RETROK_CAPSLOCK:       c_int = 301;
+pub const RETROK_SCROLLOCK:      c_int = 302;
+pub const RETROK_RSHIFT:         c_int = 303;
+pub const RETROK_LSHIFT:         c_int = 304;
+pub const RETROK_RCTRL:          c_int = 305;
+pub const RETROK_LCTRL:          c_int = 306;
+pub const RETROK_RALT:           c_int = 307;
+pub const RETROK_LALT:           c_int = 308;
+pub const RETROK_RMETA:          c_int = 309;
+pub const RETROK_LMETA:          c_int = 310;
+pub const RETROK_LSUPER:         c_int = 311;
+pub const RETROK_RSUPER:         c_int = 312;
+pub const RETROK_MODE:           c_int = 313;
+pub const RETROK_COMPOSE:        c_int = 314;
 
-pub const RETROK_HELP:           ::libc::c_int = 315;
-pub const RETROK_PRINT:          ::libc::c_int = 316;
-pub const RETROK_SYSREQ:         ::libc::c_int = 317;
-pub const RETROK_BREAK:          ::libc::c_int = 318;
-pub const RETROK_MENU:           ::libc::c_int = 319;
-pub const RETROK_POWER:          ::libc::c_int = 320;
-pub const RETROK_EURO:           ::libc::c_int = 321;
-pub const RETROK_UNDO:           ::libc::c_int = 322;
+pub const RETROK_HELP:           c_int = 315;
+pub const RETROK_PRINT:          c_int = 316;
+pub const RETROK_SYSREQ:         c_int = 317;
+pub const RETROK_BREAK:          c_int = 318;
+pub const RETROK_MENU:           c_int = 319;
+pub const RETROK_POWER:          c_int = 320;
+pub const RETROK_EURO:           c_int = 321;
+pub const RETROK_UNDO:           c_int = 322;
 
-pub const RETROK_LAST:           ::libc::c_int = 323;
+pub const RETROK_LAST:           c_int = 323;
 
 // enum values from retro_mod:
-pub const RETROKMOD_NONE:       ::libc::c_int = 0x0000;
+pub const RETROKMOD_NONE:       c_int = 0x0000;
 
-pub const RETROKMOD_SHIFT:      ::libc::c_int = 0x01;
-pub const RETROKMOD_CTRL:       ::libc::c_int = 0x02;
-pub const RETROKMOD_ALT:        ::libc::c_int = 0x04;
-pub const RETROKMOD_META:       ::libc::c_int = 0x08;
+pub const RETROKMOD_SHIFT:      c_int = 0x01;
+pub const RETROKMOD_CTRL:       c_int = 0x02;
+pub const RETROKMOD_ALT:        c_int = 0x04;
+pub const RETROKMOD_META:       c_int = 0x08;
 
-pub const RETROKMOD_NUMLOCK:    ::libc::c_int = 0x10;
-pub const RETROKMOD_CAPSLOCK:   ::libc::c_int = 0x20;
-pub const RETROKMOD_SCROLLOCK:  ::libc::c_int = 0x40;
+pub const RETROKMOD_NUMLOCK:    c_int = 0x10;
+pub const RETROKMOD_CAPSLOCK:   c_int = 0x20;
+pub const RETROKMOD_SCROLLOCK:  c_int = 0x40;
 
 /* If set, this call is not part of the public libretro API yet. It can 
  * change or be removed at any time. */
-pub const RETRO_ENVIRONMENT_EXPERIMENTAL: ::libc::c_uint = 0x10000;
+pub const RETRO_ENVIRONMENT_EXPERIMENTAL: c_uint = 0x10000;
 /* Environment callback to be used internally in frontend. */
-pub const RETRO_ENVIRONMENT_PRIVATE: ::libc::c_uint = 0x20000;
+pub const RETRO_ENVIRONMENT_PRIVATE: c_uint = 0x20000;
 
 /* Environment commands. */
-pub const RETRO_ENVIRONMENT_SET_ROTATION:  ::libc::c_uint = 1;
-                                           /* const c_uint * --
+pub const RETRO_ENVIRONMENT_SET_ROTATION:  c_uint = 1;
+                                           /* *const c_uint --
                                             * Sets screen rotation of graphics.
                                             * Is only implemented if rotation can be accelerated by hardware.
                                             * Valid values are 0, 1, 2, 3, which rotates screen by 0, 90, 180, 
                                             * 270 degrees counter-clockwise respectively.
                                             */
-pub const RETRO_ENVIRONMENT_GET_OVERSCAN:  ::libc::c_uint = 2;
-                                           /* bool * --
+pub const RETRO_ENVIRONMENT_GET_OVERSCAN:  c_uint = 2;
+                                           /* *mut u8 --
                                             * Boolean value whether or not the implementation should use overscan, 
                                             * or crop away overscan.
                                             */
-pub const RETRO_ENVIRONMENT_GET_CAN_DUPE:  ::libc::c_uint = 3;
-                                           /* bool * --
+pub const RETRO_ENVIRONMENT_GET_CAN_DUPE:  c_uint = 3;
+                                           /* *mut u8 --
                                             * Boolean value whether or not frontend supports frame duping,
                                             * passing NULL to video frame callback.
                                             */
@@ -433,22 +435,22 @@ pub const RETRO_ENVIRONMENT_GET_CAN_DUPE:  ::libc::c_uint = 3;
                                             * and reserved to avoid possible ABI clash.
                                             */
 
-pub const RETRO_ENVIRONMENT_SET_MESSAGE:   ::libc::c_uint = 6;
-                                           /* const struct retro_message * --
+pub const RETRO_ENVIRONMENT_SET_MESSAGE:   c_uint = 6;
+                                           /* *const retro_message --
                                             * Sets a message to be displayed in implementation-specific manner 
                                             * for a certain amount of 'frames'.
                                             * Should not be used for trivial messages, which should simply be 
                                             * logged via RETRO_ENVIRONMENT_GET_LOG_INTERFACE (or as a 
                                             * fallback, stderr).
                                             */
-pub const RETRO_ENVIRONMENT_SHUTDOWN:      ::libc::c_uint = 7;
+pub const RETRO_ENVIRONMENT_SHUTDOWN:      c_uint = 7;
                                            /* N/A (NULL) --
                                             * Requests the frontend to shutdown.
                                             * Should only be used if game has a specific
                                             * way to shutdown the game from a menu item or similar.
                                             */
-pub const RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: ::libc::c_uint = 8;
-                                           /* const c_uint * --
+pub const RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: c_uint = 8;
+                                           /* *const c_uint --
                                             * Gives a hint to the frontend how demanding this implementation
                                             * is on a system. E.g. reporting a level of 2 means
                                             * this implementation should run decently on all frontends
@@ -464,8 +466,8 @@ pub const RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: ::libc::c_uint = 8;
                                             * particularly demanding.
                                             * If called, it should be called in retro_load_game().
                                             */
-pub const RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: ::libc::c_uint = 9;
-                                           /* const char ** --
+pub const RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: c_uint = 9;
+                                           /* *const *mut c_char --
                                             * Returns the "system" directory of the frontend.
                                             * This directory can be used to store system specific 
                                             * content such as BIOSes, configuration data, etc.
@@ -478,8 +480,8 @@ pub const RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: ::libc::c_uint = 9;
                                             * This is now discouraged, and if possible, cores should try to 
                                             * use the new GET_SAVE_DIRECTORY.
                                             */
-pub const RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: ::libc::c_uint = 10;
-                                           /* const enum retro_pixel_format, as c_int * --
+pub const RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: c_uint = 10;
+                                           /* *const c_int (enum retro_pixel_format) --
                                             * Sets the internal pixel format used by the implementation.
                                             * The default pixel format is RETRO_PIXEL_FORMAT_0RGB1555.
                                             * This pixel format however, is deprecated (see enum retro_pixel_format).
@@ -489,8 +491,8 @@ pub const RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: ::libc::c_uint = 10;
                                             * This function should be called inside retro_load_game() or 
                                             * retro_get_system_av_info().
                                             */
-pub const RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: ::libc::c_uint = 11;
-                                           /* const struct retro_input_descriptor * --
+pub const RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: c_uint = 11;
+                                           /* *const retro_input_descriptor --
                                             * Sets an array of retro_input_descriptors.
                                             * It is up to the frontend to present this in a usable way.
                                             * The array is terminated by retro_input_descriptor::description 
@@ -498,19 +500,19 @@ pub const RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: ::libc::c_uint = 11;
                                             * This function can be called at any time, but it is recommended 
                                             * to call it as early as possible.
                                             */
-pub const RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: ::libc::c_uint = 12;
-                                           /* const struct retro_keyboard_callback * --
+pub const RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: c_uint = 12;
+                                           /* *const retro_keyboard_callback --
                                             * Sets a callback function used to notify core about keyboard events.
                                             */
-pub const RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE: ::libc::c_uint = 13;
-                                           /* const struct retro_disk_control_callback * --
+pub const RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE: c_uint = 13;
+                                           /* *const retro_disk_control_callback --
                                             * Sets an interface which frontend can use to eject and insert 
                                             * disk images.
                                             * This is used for games which consist of multiple images and 
                                             * must be manually swapped out by the user (e.g. PSX).
                                             */
-pub const RETRO_ENVIRONMENT_SET_HW_RENDER: ::libc::c_uint = 14;
-                                           /* struct retro_hw_render_callback * --
+pub const RETRO_ENVIRONMENT_SET_HW_RENDER: c_uint = 14;
+                                           /* *mut retro_hw_render_callback --
                                             * Sets an interface to let a libretro core render with 
                                             * hardware acceleration.
                                             * Should be called in retro_load_game().
@@ -521,16 +523,16 @@ pub const RETRO_ENVIRONMENT_SET_HW_RENDER: ::libc::c_uint = 14;
                                             * If HW rendering is used, pass only RETRO_HW_FRAME_BUFFER_VALID or 
                                             * NULL to retro_video_refresh_t.
                                             */
-pub const RETRO_ENVIRONMENT_GET_VARIABLE: ::libc::c_uint = 15;
-                                           /* struct retro_variable * --
+pub const RETRO_ENVIRONMENT_GET_VARIABLE: c_uint = 15;
+                                           /* *mut retro_variable --
                                             * Interface to acquire user-defined information from environment
                                             * that cannot feasibly be supported in a multi-system way.
                                             * 'key' should be set to a key which has already been set by 
                                             * SET_VARIABLES.
                                             * 'data' will be set to a value or NULL.
                                             */
-pub const RETRO_ENVIRONMENT_SET_VARIABLES: ::libc::c_uint = 16;
-                                           /* const struct retro_variable * --
+pub const RETRO_ENVIRONMENT_SET_VARIABLES: c_uint = 16;
+                                           /* *const retro_variable --
                                             * Allows an implementation to signal the environment
                                             * which variables it might want to check for later using 
                                             * GET_VARIABLE.
@@ -564,21 +566,21 @@ pub const RETRO_ENVIRONMENT_SET_VARIABLES: ::libc::c_uint = 16;
                                             * Only strings are operated on. The possible values will 
                                             * generally be displayed and stored as-is by the frontend.
                                             */
-pub const RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: ::libc::c_uint = 17;
-                                           /* bool * --
+pub const RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: c_uint = 17;
+                                           /* *mut u8 --
                                             * Result is set to true if some variables are updated by
                                             * frontend since last call to RETRO_ENVIRONMENT_GET_VARIABLE.
                                             * Variables should be queried with GET_VARIABLE.
                                             */
-pub const RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: ::libc::c_uint = 18;
-                                           /* const bool * --
+pub const RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: c_uint = 18;
+                                           /* *const u8 --
                                             * If true, the libretro implementation supports calls to 
                                             * retro_load_game() with NULL as argument.
                                             * Used by cores which can run without particular game data.
                                             * This should be called within retro_set_environment() only.
                                             */
-pub const RETRO_ENVIRONMENT_GET_LIBRETRO_PATH: ::libc::c_uint = 19;
-                                           /* const char ** --
+pub const RETRO_ENVIRONMENT_GET_LIBRETRO_PATH: c_uint = 19;
+                                           /* *const *mut c_char --
                                             * Retrieves the absolute path from where this libretro 
                                             * implementation was loaded.
                                             * NULL is returned if the libretro was loaded statically 
@@ -591,8 +593,8 @@ pub const RETRO_ENVIRONMENT_GET_LIBRETRO_PATH: ::libc::c_uint = 19;
                                            /* Environment 20 was an obsolete version of SET_AUDIO_CALLBACK. 
                                             * It was not used by any known core at the time,
                                             * and was removed from the API. */
-pub const RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: ::libc::c_uint = 22;
-                                           /* const struct retro_audio_callback * --
+pub const RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: c_uint = 22;
+                                           /* *const retro_audio_callback --
                                             * Sets an interface which is used to notify a libretro core about audio 
                                             * being available for writing.
                                             * The callback can be called from any thread, so a core using this must 
@@ -617,8 +619,8 @@ pub const RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: ::libc::c_uint = 22;
                                             * A libretro core using SET_AUDIO_CALLBACK should also make use of 
                                             * SET_FRAME_TIME_CALLBACK.
                                             */
-pub const RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: ::libc::c_uint = 21;
-                                           /* const struct retro_frame_time_callback * --
+pub const RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: c_uint = 21;
+                                           /* *const retro_frame_time_callback --
                                             * Lets the core know how much time has passed since last 
                                             * invocation of retro_run().
                                             * The frontend can tamper with the timing to fake fast-forward, 
@@ -626,15 +628,15 @@ pub const RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: ::libc::c_uint = 21;
                                             * In this case the delta time will use the reference value 
                                             * in frame_time_callback..
                                             */
-pub const RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: ::libc::c_uint = 23;
-                                           /* struct retro_rumble_interface * --
+pub const RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: c_uint = 23;
+                                           /* *mut retro_rumble_interface -
                                             * Gets an interface which is used by a libretro core to set 
                                             * state of rumble motors in controllers.
                                             * A strong and weak motor is supported, and they can be 
                                             * controlled indepedently.
                                             */
-pub const RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES: ::libc::c_uint = 24;
-                                           /* uint64 * --
+pub const RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES: c_uint = 24;
+                                           /* *mut uint64 --
                                             * Gets a bitmask telling which device type are expected to be 
                                             * handled properly in a call to retro_input_state_t.
                                             * Devices which are not handled or recognized always return 
@@ -642,8 +644,8 @@ pub const RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES: ::libc::c_uint = 24;
                                             * Example bitmask: caps = (1 << RETRO_DEVICE_JOYPAD) | (1 << RETRO_DEVICE_ANALOG).
                                             * Should only be called in retro_run().
                                             */
-pub const RETRO_ENVIRONMENT_GET_SENSOR_INTERFACE: ::libc::c_uint = (25 | RETRO_ENVIRONMENT_EXPERIMENTAL);
-                                           /* struct retro_sensor_interface * --
+pub const RETRO_ENVIRONMENT_GET_SENSOR_INTERFACE: c_uint = (25 | RETRO_ENVIRONMENT_EXPERIMENTAL);
+                                           /* *mut retro_sensor_interface --
                                             * Gets access to the sensor interface.
                                             * The purpose of this interface is to allow
                                             * setting state related to sensors such as polling rate, 
@@ -651,8 +653,8 @@ pub const RETRO_ENVIRONMENT_GET_SENSOR_INTERFACE: ::libc::c_uint = (25 | RETRO_E
                                             * Reading sensor state is done via the normal 
                                             * input_state_callback API.
                                             */
-pub const RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: ::libc::c_uint = (26 | RETRO_ENVIRONMENT_EXPERIMENTAL);
-                                           /* struct retro_camera_callback * --
+pub const RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: c_uint = (26 | RETRO_ENVIRONMENT_EXPERIMENTAL);
+                                           /* *mut retro_camera_callback --
                                             * Gets an interface to a video camera driver.
                                             * A libretro core can use this interface to get access to a 
                                             * video camera.
@@ -676,8 +678,8 @@ pub const RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: ::libc::c_uint = (26 | RETRO_E
                                             * functions must be used to explicitly
                                             * start and stop the camera driver.
                                             */
-pub const RETRO_ENVIRONMENT_GET_LOG_INTERFACE: ::libc::c_uint = 27;
-                                           /* struct retro_log_callback * --
+pub const RETRO_ENVIRONMENT_GET_LOG_INTERFACE: c_uint = 27;
+                                           /* *mut retro_log_callback --
                                             * Gets an interface for logging. This is useful for 
                                             * logging in a cross-platform way
                                             * as certain platforms cannot use use stderr for logging. 
@@ -686,21 +688,21 @@ pub const RETRO_ENVIRONMENT_GET_LOG_INTERFACE: ::libc::c_uint = 27;
                                             * If this interface is not used, libretro cores should 
                                             * log to stderr as desired.
                                             */
-pub const RETRO_ENVIRONMENT_GET_PERF_INTERFACE: ::libc::c_uint = 28;
-                                           /* struct retro_perf_callback * --
+pub const RETRO_ENVIRONMENT_GET_PERF_INTERFACE: c_uint = 28;
+                                           /* *mut retro_perf_callback --
                                             * Gets an interface for performance counters. This is useful 
                                             * for performance logging in a cross-platform way and for detecting 
                                             * architecture-specific features, such as SIMD support.
                                             */
-pub const RETRO_ENVIRONMENT_GET_LOCATION_INTERFACE: ::libc::c_uint = 29;
-                                           /* struct retro_location_callback * --
+pub const RETRO_ENVIRONMENT_GET_LOCATION_INTERFACE: c_uint = 29;
+                                           /* *mut retro_location_callback --
                                             * Gets access to the location interface.
                                             * The purpose of this interface is to be able to retrieve 
                                             * location-based information from the host device,
                                             * such as current latitude / longitude.
                                             */
-pub const RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY: ::libc::c_uint = 30;
-                                           /* const char ** --
+pub const RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY: c_uint = 30;
+                                           /* *const *mut c_char --
                                             * Returns the "content" directory of the frontend.
                                             * This directory can be used to store specific assets that the 
                                             * core relies upon, such as art assets,
@@ -709,8 +711,8 @@ pub const RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY: ::libc::c_uint = 30;
                                             * If so, no such directory is defined,
                                             * and it's up to the implementation to find a suitable directory.
                                             */
-pub const RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: ::libc::c_uint = 31;
-                                           /* const char ** --
+pub const RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: c_uint = 31;
+                                           /* *const *mut c_char --
                                             * Returns the "save" directory of the frontend.
                                             * This directory can be used to store SRAM, memory cards, 
                                             * high scores, etc, if the libretro core
@@ -723,8 +725,8 @@ pub const RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: ::libc::c_uint = 31;
                                             * The path here can be NULL. It should only be non-NULL if the 
                                             * frontend user has set a specific save path.
                                             */
-pub const RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: ::libc::c_uint = 32;
-                                           /* const struct retro_system_av_info * --
+pub const RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: c_uint = 32;
+                                           /* *const retro_system_av_info --
                                             * Sets a new av_info structure. This can only be called from 
                                             * within retro_run().
                                             * This should *only* be used if the core is completely altering the 
@@ -756,8 +758,8 @@ pub const RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: ::libc::c_uint = 32;
                                             * If this returns false, the frontend does not acknowledge a 
                                             * changed av_info struct.
                                             */
-pub const RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: ::libc::c_uint = 33;
-                                           /* const struct retro_get_proc_address_interface * --
+pub const RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: c_uint = 33;
+                                           /* *const retro_get_proc_address_interface --
                                             * Allows a libretro core to announce support for the 
                                             * get_proc_address() interface.
                                             * This interface allows for a standard way to extend libretro where 
@@ -767,8 +769,8 @@ pub const RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: ::libc::c_uint = 33;
                                             * If a core wants to expose this interface, SET_PROC_ADDRESS_CALLBACK 
                                             * **MUST** be called from within retro_set_environment().
                                             */
-pub const RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: ::libc::c_uint = 34;
-                                           /* const struct retro_subsystem_info * --
+pub const RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: c_uint = 34;
+                                           /* *const retro_subsystem_info --
                                             * This environment call introduces the concept of libretro "subsystems".
                                             * A subsystem is a variant of a libretro core which supports 
                                             * different kinds of games.
@@ -786,8 +788,8 @@ pub const RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: ::libc::c_uint = 34;
                                             * If a core wants to use this functionality, SET_SUBSYSTEM_INFO
                                             * **MUST** be called from within retro_set_environment().
                                             */
-pub const RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: ::libc::c_uint = 35;
-                                           /* const struct retro_controller_info * --
+pub const RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: c_uint = 35;
+                                           /* *const retro_controller_info --
                                             * This environment call lets a libretro core tell the frontend 
                                             * which controller types are recognized in calls to 
                                             * retro_set_controller_port_device().
@@ -811,8 +813,8 @@ pub const RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: ::libc::c_uint = 35;
                                             * Even if special device types are set in the libretro core, 
                                             * libretro should only poll input based on the base input device types.
                                             */
-pub const RETRO_ENVIRONMENT_SET_MEMORY_MAPS: ::libc::c_uint = (36 | RETRO_ENVIRONMENT_EXPERIMENTAL);
-                                           /* const struct retro_memory_map * --
+pub const RETRO_ENVIRONMENT_SET_MEMORY_MAPS: c_uint = (36 | RETRO_ENVIRONMENT_EXPERIMENTAL);
+                                           /* *const retro_memory_map --
                                             * This environment call lets a libretro core tell the frontend 
                                             * about the memory maps this core emulates.
                                             * This can be used to implement, for example, cheats in a core-agnostic way.
@@ -824,8 +826,8 @@ pub const RETRO_ENVIRONMENT_SET_MEMORY_MAPS: ::libc::c_uint = (36 | RETRO_ENVIRO
                                             *
                                             * Can be called from retro_init and retro_load_game.
                                             */
-pub const RETRO_ENVIRONMENT_SET_GEOMETRY: ::libc::c_uint = 37;
-                                           /* const struct retro_game_geometry * --
+pub const RETRO_ENVIRONMENT_SET_GEOMETRY: c_uint = 37;
+                                           /* *const retro_game_geometry --
                                             * This environment call is similar to SET_SYSTEM_AV_INFO for changing 
                                             * video parameters, but provides a guarantee that drivers will not be 
                                             * reinitialized.
@@ -843,8 +845,8 @@ pub const RETRO_ENVIRONMENT_SET_GEOMETRY: ::libc::c_uint = 37;
                                             * A frontend must guarantee that this environment call completes in 
                                             * constant time.
                                             */
-pub const RETRO_ENVIRONMENT_GET_USERNAME: ::libc::c_uint = 38;
-                                           /* const char **
+pub const RETRO_ENVIRONMENT_GET_USERNAME: c_uint = 38;
+                                           /* *const *mut c_char
                                             * Returns the specified username of the frontend, if specified by the user.
                                             * This username can be used as a nickname for a core that has online facilities 
                                             * or any other mode where personalization of the user is desirable.
@@ -852,20 +854,20 @@ pub const RETRO_ENVIRONMENT_GET_USERNAME: ::libc::c_uint = 38;
                                             * If this environ callback is used by a core that requires a valid username, 
                                             * a default username should be specified by the core.
                                             */
-pub const RETRO_ENVIRONMENT_GET_LANGUAGE: ::libc::c_uint = 39;
-                                           /* c_uint * --
+pub const RETRO_ENVIRONMENT_GET_LANGUAGE: c_uint = 39;
+                                           /* *mut c_uint --
                                             * Returns the specified language of the frontend, if specified by the user.
                                             * It can be used by the core for localization purposes.
                                             */
 
-pub const RETRO_MEMDESC_CONST:     ::libc::c_uint = (1 << 0);   /* The frontend will never change this memory area once retro_load_game has returned. */
-pub const RETRO_MEMDESC_BIGENDIAN: ::libc::c_uint = (1 << 1);   /* The memory area contains big endian data. Default is little endian. */
-pub const RETRO_MEMDESC_ALIGN_2:   ::libc::c_uint = (1 << 16);  /* All memory access in this area is aligned to their own size, or 2, whichever is smaller. */
-pub const RETRO_MEMDESC_ALIGN_4:   ::libc::c_uint = (2 << 16);
-pub const RETRO_MEMDESC_ALIGN_8:   ::libc::c_uint = (3 << 16);
-pub const RETRO_MEMDESC_MINSIZE_2: ::libc::c_uint = (1 << 24);  /* All memory in this region is accessed at least 2 bytes at the time. */
-pub const RETRO_MEMDESC_MINSIZE_4: ::libc::c_uint = (2 << 24);
-pub const RETRO_MEMDESC_MINSIZE_8: ::libc::c_uint = (3 << 24);
+pub const RETRO_MEMDESC_CONST:     c_uint = (1 << 0);   /* The frontend will never change this memory area once retro_load_game has returned. */
+pub const RETRO_MEMDESC_BIGENDIAN: c_uint = (1 << 1);   /* The memory area contains big endian data. Default is little endian. */
+pub const RETRO_MEMDESC_ALIGN_2:   c_uint = (1 << 16);  /* All memory access in this area is aligned to their own size, or 2, whichever is smaller. */
+pub const RETRO_MEMDESC_ALIGN_4:   c_uint = (2 << 16);
+pub const RETRO_MEMDESC_ALIGN_8:   c_uint = (3 << 16);
+pub const RETRO_MEMDESC_MINSIZE_2: c_uint = (1 << 24);  /* All memory in this region is accessed at least 2 bytes at the time. */
+pub const RETRO_MEMDESC_MINSIZE_4: c_uint = (2 << 24);
+pub const RETRO_MEMDESC_MINSIZE_8: c_uint = (3 << 24);
 #[repr(C)]
 pub struct retro_memory_descriptor
 {
@@ -884,12 +886,12 @@ pub struct retro_memory_descriptor
     * open bus). No flags should be set if the pointer is NULL.
     * It's recommended to minimize the number of descriptors if possible,
     * but not mandatory. */
-   pub ptr: *mut ::libc::types::common::c95::c_void,
-   pub offset: ::libc::types::os::arch::c95::size_t,
+   pub ptr: *mut c_void,
+   pub offset: size_t,
 
    /* This is the location in the emulated address space 
     * where the mapping starts. */
-   pub start: ::libc::types::os::arch::c95::size_t,
+   pub start: size_t,
 
    /* Which bits must be same as in 'start' for this mapping to apply.
     * The first memory descriptor to claim a certain byte is the one 
@@ -897,11 +899,11 @@ pub struct retro_memory_descriptor
     * A bit which is set in 'start' must also be set in this.
     * Can be zero, in which case each byte is assumed mapped exactly once. 
     * In this case, 'len' must be a power of two. */
-   pub select: ::libc::types::os::arch::c95::size_t,
+   pub select: size_t,
 
    /* If this is nonzero, the set bits are assumed not connected to the 
     * memory chip's address pins. */
-   pub disconnect: ::libc::types::os::arch::c95::size_t,
+   pub disconnect: size_t,
 
    /* This one tells the size of the current memory area.
     * If, after start+disconnect are applied, the address is higher than 
@@ -910,7 +912,7 @@ pub struct retro_memory_descriptor
     * If the address is still too high, the next highest bit is cleared.
     * Can be zero, in which case it's assumed to be infinite (as limited 
     * by 'select' and 'disconnect'). */
-   pub len: ::libc::types::os::arch::c95::size_t,
+   pub len: size_t,
 
    /* To go from emulated address to physical address, the following 
     * order applies:
@@ -941,7 +943,7 @@ pub struct retro_memory_descriptor
     * would refer to.
     * The length can't be used for that purpose; the frontend may want 
     * to append arbitrary data to an address, without a separator. */
-   pub addrspace: *const libc::types::os::arch::c95::c_char,
+   pub addrspace: *const c_char,
 }
 
 /* The frontend may use the largest value of 'start'+'select' in a 
@@ -986,7 +988,7 @@ pub struct retro_memory_descriptor
 pub struct retro_memory_map
 {
    pub descriptors: *const retro_memory_descriptor,
-   pub num_descriptors: ::libc::c_uint,
+   pub num_descriptors: c_uint,
 }
 
 #[repr(C)]
@@ -995,43 +997,43 @@ pub struct retro_controller_description
    /* Human-readable description of the controller. Even if using a generic 
     * input device type, this can be set to the particular device type the 
     * core uses. */
-   pub desc: *const libc::types::common::c95::c_void,
+   pub desc: *const c_void,
 
    /* Device type passed to retro_set_controller_port_device(). If the device 
     * type is a sub-class of a generic input device type, use the 
     * RETRO_DEVICE_SUBCLASS macro to create an ID.
     *
     * E.g. RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1). */
-   pub id: ::libc::c_uint,
+   pub id: c_uint,
 }
 
 #[repr(C)]
 pub struct retro_controller_info
 {
    pub types: *const retro_controller_description,
-   pub num_types: ::libc::c_uint,
+   pub num_types: c_uint,
 }
 
 #[repr(C)]
 pub struct retro_subsystem_memory_info
 {
    /* The extension associated with a memory type, e.g. "psram". */
-   pub extension: *const libc::types::os::arch::c95::c_char,
+   pub extension: *const c_char,
 
    /* The memory type for retro_get_memory(). This should be at 
     * least 0x100 to avoid conflict with standardized 
     * libretro memory types. */
-   pub mem_type: ::libc::c_uint, /* NOTE renamed to avoid keyword conflict */
+   pub mem_type: c_uint, /* NOTE renamed to avoid keyword conflict */
 }
 
 #[repr(C)]
 pub struct retro_subsystem_rom_info
 {
    /* Describes what the content is (SGB BIOS, GB ROM, etc). */
-   pub desc: *const libc::types::os::arch::c95::c_char,
+   pub desc: *const c_char,
 
    /* Same definition as retro_get_system_info(). */
-   pub valid_extensions: *const libc::types::os::arch::c95::c_char,
+   pub valid_extensions: *const c_char,
 
    /* Same definition as retro_get_system_info(). */
    /* TODO use c_bool if Rust introduces it */
@@ -1047,21 +1049,21 @@ pub struct retro_subsystem_rom_info
    /* Content can have multiple associated persistent 
     * memory types (retro_get_memory()). */
    pub memory: *const retro_subsystem_memory_info,
-   pub num_memory: ::libc::c_uint,
+   pub num_memory: c_uint,
 }
 
 #[repr(C)]
 pub struct retro_subsystem_info
 {
    /* Human-readable string of the subsystem type, e.g. "Super GameBoy" */
-   pub desc: *const libc::types::os::arch::c95::c_char,
+   pub desc: *const c_char,
 
    /* A computer friendly short string identifier for the subsystem type.
     * This name must be [a-z].
     * E.g. if desc is "Super GameBoy", this can be "sgb".
     * This identifier can be used for command-line interfaces, etc.
     */
-   pub ident: *const libc::types::os::arch::c95::c_char,
+   pub ident: *const c_char,
 
    /* Infos for each content file. The first entry is assumed to be the 
     * "most significant" content for frontend purposes.
@@ -1072,10 +1074,10 @@ pub struct retro_subsystem_info
    pub roms: *const retro_subsystem_rom_info,
 
    /* Number of content files associated with a subsystem. */
-   pub num_roms: ::libc::c_uint,
+   pub num_roms: c_uint,
    
    /* The type passed to retro_load_game_special(). */
-   pub id: ::libc::c_uint,
+   pub id: c_uint,
 }
 
 #[allow(non_camel_case_types)]
@@ -1096,7 +1098,7 @@ pub type retro_proc_address_t = extern "C" fn();
  * The returned function pointer must be cast to the corresponding type.
  */
 #[allow(non_camel_case_types)]
-pub type retro_get_proc_address_t = extern "C" fn(sym: *const ::libc::c_char)
+pub type retro_get_proc_address_t = extern "C" fn(sym: *const c_char)
                                      -> retro_proc_address_t;
 
 #[repr(C)]
@@ -1106,16 +1108,16 @@ pub struct retro_get_proc_address_interface
 }
 
 // enum values from retro_log_level:
-pub const RETRO_LOG_DEBUG: ::libc::c_int = 0;
-pub const RETRO_LOG_INFO: ::libc::c_int = 1;
-pub const RETRO_LOG_WARN: ::libc::c_int = 2;
-pub const RETRO_LOG_ERROR: ::libc::c_int = 3;
+pub const RETRO_LOG_DEBUG: c_int = 0;
+pub const RETRO_LOG_INFO: c_int = 1;
+pub const RETRO_LOG_WARN: c_int = 2;
+pub const RETRO_LOG_ERROR: c_int = 3;
 
 /* Logging function. Takes log level argument as well. */
 // level is one of RETRO_LOG_* consts
 #[allow(non_camel_case_types)]
-pub type retro_log_printf_t = extern "C" fn(level: ::libc::c_int,
-                                             fmt: *const ::libc::c_char,
+pub type retro_log_printf_t = extern "C" fn(level: c_int,
+                                             fmt: *const c_char,
                                              ...);
 #[repr(C)]
 pub struct retro_log_callback
@@ -1126,22 +1128,22 @@ pub struct retro_log_callback
 /* Performance related functions */
 
 /* ID values for SIMD CPU features */
-pub const RETRO_SIMD_SSE:      ::libc::c_uint = (1 << 0);
-pub const RETRO_SIMD_SSE2:     ::libc::c_uint = (1 << 1);
-pub const RETRO_SIMD_VMX:      ::libc::c_uint = (1 << 2);
-pub const RETRO_SIMD_VMX128:   ::libc::c_uint = (1 << 3);
-pub const RETRO_SIMD_AVX:      ::libc::c_uint = (1 << 4);
-pub const RETRO_SIMD_NEON:     ::libc::c_uint = (1 << 5);
-pub const RETRO_SIMD_SSE3:     ::libc::c_uint = (1 << 6);
-pub const RETRO_SIMD_SSSE3:    ::libc::c_uint = (1 << 7);
-pub const RETRO_SIMD_MMX:      ::libc::c_uint = (1 << 8);
-pub const RETRO_SIMD_MMXEXT:   ::libc::c_uint = (1 << 9);
-pub const RETRO_SIMD_SSE4:     ::libc::c_uint = (1 << 10);
-pub const RETRO_SIMD_SSE42:    ::libc::c_uint = (1 << 11);
-pub const RETRO_SIMD_AVX2:     ::libc::c_uint = (1 << 12);
-pub const RETRO_SIMD_VFPU:     ::libc::c_uint = (1 << 13);
-pub const RETRO_SIMD_PS:       ::libc::c_uint = (1 << 14);
-pub const RETRO_SIMD_AES:      ::libc::c_uint = (1 << 15);
+pub const RETRO_SIMD_SSE:      c_uint = (1 << 0);
+pub const RETRO_SIMD_SSE2:     c_uint = (1 << 1);
+pub const RETRO_SIMD_VMX:      c_uint = (1 << 2);
+pub const RETRO_SIMD_VMX128:   c_uint = (1 << 3);
+pub const RETRO_SIMD_AVX:      c_uint = (1 << 4);
+pub const RETRO_SIMD_NEON:     c_uint = (1 << 5);
+pub const RETRO_SIMD_SSE3:     c_uint = (1 << 6);
+pub const RETRO_SIMD_SSSE3:    c_uint = (1 << 7);
+pub const RETRO_SIMD_MMX:      c_uint = (1 << 8);
+pub const RETRO_SIMD_MMXEXT:   c_uint = (1 << 9);
+pub const RETRO_SIMD_SSE4:     c_uint = (1 << 10);
+pub const RETRO_SIMD_SSE42:    c_uint = (1 << 11);
+pub const RETRO_SIMD_AVX2:     c_uint = (1 << 12);
+pub const RETRO_SIMD_VFPU:     c_uint = (1 << 13);
+pub const RETRO_SIMD_PS:       c_uint = (1 << 14);
+pub const RETRO_SIMD_AES:      c_uint = (1 << 15);
 
 #[allow(non_camel_case_types)]
 pub type retro_perf_tick_t = u64;
@@ -1151,7 +1153,7 @@ pub type retro_time_t = i64;
 #[repr(C)]
 pub struct retro_perf_counter
 {
-   pub ident: *const ::libc::c_char,
+   pub ident: *const c_char,
    pub start: retro_perf_tick_t,
    pub total: retro_perf_tick_t,
    pub call_cnt: retro_perf_tick_t,
@@ -1174,7 +1176,7 @@ pub type retro_perf_get_counter_t = extern "C" fn() -> retro_perf_tick_t;
 
 /* Returns a bit-mask of detected CPU features (RETRO_SIMD_*). */
 #[allow(non_camel_case_types)]
-pub type retro_get_cpu_features_t = extern "C" fn() -> ::libc::c_long;
+pub type retro_get_cpu_features_t = extern "C" fn() -> u64;
 
 /* Asks frontend to log and/or display the state of performance counters.
  * Performance counters can always be poked into manually as well.
@@ -1249,23 +1251,23 @@ pub struct retro_perf_callback
  * It will be marked as experimental until then.
  */
 // enum values from retro_sensor_action:
-pub const RETRO_SENSOR_ACCELEROMETER_ENABLE: ::libc::c_uint = 0;
-pub const RETRO_SENSOR_ACCELEROMETER_DISABLE: ::libc::c_uint = 1;
+pub const RETRO_SENSOR_ACCELEROMETER_ENABLE: c_uint = 0;
+pub const RETRO_SENSOR_ACCELEROMETER_DISABLE: c_uint = 1;
 
 /* Id values for SENSOR types. */
-pub const RETRO_SENSOR_ACCELEROMETER_X: ::libc::c_uint = 0;
-pub const RETRO_SENSOR_ACCELEROMETER_Y: ::libc::c_uint = 1;
-pub const RETRO_SENSOR_ACCELEROMETER_Z: ::libc::c_uint = 2;
+pub const RETRO_SENSOR_ACCELEROMETER_X: c_uint = 0;
+pub const RETRO_SENSOR_ACCELEROMETER_Y: c_uint = 1;
+pub const RETRO_SENSOR_ACCELEROMETER_Z: c_uint = 2;
 
 // action is one of RETRO_SENSOR_ACCELEROMETER_* consts
 #[allow(non_camel_case_types)]
-pub type retro_set_sensor_state_t = extern "C" fn(port: ::libc::c_uint,
-                                                   action: ::libc::c_int,
-                                                   rate: ::libc::c_uint);
+pub type retro_set_sensor_state_t = extern "C" fn(port: c_uint,
+                                                   action: c_int,
+                                                   rate: c_uint);
 
 #[allow(non_camel_case_types)]
-pub type retro_sensor_get_input_t = extern "C" fn(port: ::libc::c_uint,
-                                                   id: ::libc::c_uint) 
+pub type retro_sensor_get_input_t = extern "C" fn(port: c_uint,
+                                                   id: c_uint) 
                                                    -> ::libc::c_float;
 #[allow(dead_code)]
 #[repr(C)]
@@ -1276,8 +1278,8 @@ struct retro_sensor_interface
 }
 
 // enum values from retro_camera_buffer:
-pub const RETRO_CAMERA_BUFFER_OPENGL_TEXTURE: ::libc::c_int = 0;
-pub const RETRO_CAMERA_BUFFER_RAW_FRAMEBUFFER: ::libc::c_int = 1;
+pub const RETRO_CAMERA_BUFFER_OPENGL_TEXTURE: c_int = 0;
+pub const RETRO_CAMERA_BUFFER_RAW_FRAMEBUFFER: c_int = 1;
 
 /* Starts the camera driver. Can only be called in retro_run(). */
 #[allow(non_camel_case_types)]
@@ -1300,10 +1302,10 @@ pub type retro_camera_lifetime_status_t = extern "C" fn();
  */
 #[allow(non_camel_case_types)]
 pub type retro_camera_frame_raw_framebuffer_t = extern "C" fn
-                                                (buffer: *const ::libc::c_uint,
-                                                 width: ::libc::c_uint,
-                                                 height: ::libc::c_uint,
-                                                 pitch: ::libc::types::os::arch::c95::size_t);
+                                                (buffer: *const c_uint,
+                                                 width: c_uint,
+                                                 height: c_uint,
+                                                 pitch: size_t);
 
 /* A callback for when OpenGL textures are used.
  *
@@ -1325,8 +1327,8 @@ pub type retro_camera_frame_raw_framebuffer_t = extern "C" fn
  */
 #[allow(non_camel_case_types)]
 pub type retro_camera_frame_opengl_texture_t = extern "C" fn
-                                              (texture_id: ::libc::c_uint,
-                                               texture_target: ::libc::c_uint,
+                                              (texture_id: c_uint,
+                                               texture_target: c_uint,
                                                affine: *const ::libc::c_float);
 
 #[allow(dead_code)]
@@ -1338,8 +1340,8 @@ struct retro_camera_callback
     */
    pub caps: ::libc::c_ulong,
 
-   pub width: ::libc::c_uint, /* Desired resolution for camera. Is only used as a hint. */
-   pub height: ::libc::c_uint,
+   pub width: c_uint, /* Desired resolution for camera. Is only used as a hint. */
+   pub height: c_uint,
    pub start: retro_camera_start_t, /* Set by frontend. */
    pub stop: retro_camera_stop_t, /* Set by frontend. */
 
@@ -1371,8 +1373,8 @@ struct retro_camera_callback
  * interval_distance is the distance interval expressed in meters.
  */
 #[allow(non_camel_case_types)]
-pub type retro_location_set_interval_t = extern "C" fn(interval_ms: ::libc::c_uint,
-                                                        interval_distance: ::libc::c_uint);
+pub type retro_location_set_interval_t = extern "C" fn(interval_ms: c_uint,
+                                                        interval_distance: c_uint);
 
 /* Start location services. The device will start listening for changes to the
  * current location at regular intervals (which are defined with 
@@ -1415,8 +1417,8 @@ struct retro_location_callback
 }
 
 // enum values from retro_rumble_effect:
-pub const RETRO_RUMBLE_STRONG: ::libc::c_int = 0;
-pub const RETRO_RUMBLE_WEAK: ::libc::c_int = 1;
+pub const RETRO_RUMBLE_STRONG: c_int = 0;
+pub const RETRO_RUMBLE_WEAK: c_int = 1;
 
 /* Sets rumble state for joypad plugged in port 'port'. 
  * Rumble effects are controlled independently,
@@ -1427,9 +1429,9 @@ pub const RETRO_RUMBLE_WEAK: ::libc::c_int = 1;
  * Calling this before first retro_run() is likely to return false. */
 // effect is one of RETRO_RUMBLE_* consts
 #[allow(non_camel_case_types)]
-pub type retro_set_rumble_state_t = extern "C" fn(port: ::libc::c_uint,
-                                                    effect: ::libc::c_int,
-                                                    strength: ::libc::c_ushort)
+pub type retro_set_rumble_state_t = extern "C" fn(port: c_uint,
+                                                    effect: c_int,
+                                                    strength: u16)
                                                     -> u8;
 
 #[allow(dead_code)]
@@ -1511,23 +1513,23 @@ pub type retro_hw_get_current_framebuffer_t = extern "C" fn() ->
 
 /* Get a symbol from HW context. */
 #[allow(non_camel_case_types)]
-pub type retro_hw_get_proc_address_t = extern "C" fn(sym: *const ::libc::c_char)
+pub type retro_hw_get_proc_address_t = extern "C" fn(sym: *const c_char)
                                         -> retro_proc_address_t;
 
 // enum values for retro_hw_context_type:
-pub const RETRO_HW_CONTEXT_NONE:             ::libc::c_uint = 0;
+pub const RETRO_HW_CONTEXT_NONE:             c_uint = 0;
    /* OpenGL 2.x. Driver can choose to use latest compatibility context. */
-pub const RETRO_HW_CONTEXT_OPENGL:           ::libc::c_uint = 1; 
+pub const RETRO_HW_CONTEXT_OPENGL:           c_uint = 1; 
    /* OpenGL ES 2.0. */
-pub const   RETRO_HW_CONTEXT_OPENGLES2:        ::libc::c_uint = 2;
+pub const   RETRO_HW_CONTEXT_OPENGLES2:        c_uint = 2;
    /* Modern desktop core GL context. Use version_major/
     * version_minor fields to set GL version. */
-pub const   RETRO_HW_CONTEXT_OPENGL_CORE:      ::libc::c_uint = 3;
+pub const   RETRO_HW_CONTEXT_OPENGL_CORE:      c_uint = 3;
    /* OpenGL ES 3.0 */
-pub const   RETRO_HW_CONTEXT_OPENGLES3:        ::libc::c_uint = 4;
+pub const   RETRO_HW_CONTEXT_OPENGLES3:        c_uint = 4;
    /* OpenGL ES 3.1+. Set version_major/version_minor. For GLES2 and GLES3,
     * use the corresponding enums directly. */
-pub const   RETRO_HW_CONTEXT_OPENGLES_VERSION: ::libc::c_uint = 5;
+pub const   RETRO_HW_CONTEXT_OPENGLES_VERSION: c_uint = 5;
 
 #[allow(dead_code)]
 #[repr(C)]
@@ -1535,7 +1537,7 @@ struct retro_hw_render_callback
 {
    /* Which API to use. Set by libretro core. */
    // context_type is one of RETRO_HW_CONTEXT_* consts
-   pub context_type: ::libc::c_int,
+   pub context_type: c_int,
 
    /* Called when a context has been created or when it has been reset.
     * An OpenGL context is only valid after context_reset() has been called.
@@ -1571,10 +1573,10 @@ struct retro_hw_render_callback
    pub bottom_left_origin: u8,
    
    /* Major version number for core GL context or GLES 3.1+. */
-   pub version_major: ::libc::c_uint,
+   pub version_major: c_uint,
 
    /* Minor version number for core GL context or GLES 3.1+. */
-   pub version_minor: ::libc::c_uint,
+   pub version_minor: c_uint,
 
    /* If this is true, the frontend will go very far to avoid 
     * resetting context in scenarios like toggling fullscreen, etc.
@@ -1630,7 +1632,7 @@ struct retro_hw_render_callback
 #[allow(non_camel_case_types)]
 pub type retro_keyboard_event_t = extern "C" fn
                                   (down: u8,
-                                   keycode: ::libc::c_uint,
+                                   keycode: c_uint,
                                    character: u32,
                                    key_modifiers: u16);
 
@@ -1669,18 +1671,18 @@ pub type retro_get_eject_state_t = extern "C" fn() -> u8;
  * If return value is >= get_num_images(), no disk is currently inserted.
  */
 #[allow(non_camel_case_types)]
-pub type retro_get_image_index_t = extern "C" fn() -> ::libc::c_uint;
+pub type retro_get_image_index_t = extern "C" fn() -> c_uint;
 
 /* Sets image index. Can only be called when disk is ejected.
  * The implementation supports setting "no disk" by using an 
  * index >= get_num_images().
  */
 #[allow(non_camel_case_types)]
-pub type retro_set_image_index_t = extern "C" fn(index: ::libc::c_uint) -> u8;
+pub type retro_set_image_index_t = extern "C" fn(index: c_uint) -> u8;
 
 /* Gets total number of images which are available to use. */
 #[allow(non_camel_case_types)]
-pub type retro_get_num_images_t = extern "C" fn() -> ::libc::c_uint;
+pub type retro_get_num_images_t = extern "C" fn() -> c_uint;
 
 /* Replaces the disk image associated with index.
  * Arguments to pass in info have same requirements as retro_load_game().
@@ -1696,7 +1698,7 @@ pub type retro_get_num_images_t = extern "C" fn() -> ::libc::c_uint;
  */
 #[allow(non_camel_case_types)]
 pub type retro_replace_image_index_t = extern "C" fn
-                                       (index: ::libc::c_uint,
+                                       (index: c_uint,
                                         info: *const retro_game_info) -> u8;
 
 /* Adds a new valid index (get_num_images()) to the internal disk list.
@@ -1726,11 +1728,11 @@ pub struct retro_disk_control_callback
 * 0 bit must be set to 0.
 * This pixel format is default for compatibility concerns only.
 * If a 15/16-bit pixel format is desired, consider using RGB565. */
-pub const RETRO_PIXEL_FORMAT_0RGB1555: ::libc::c_uint = 0;
+pub const RETRO_PIXEL_FORMAT_0RGB1555: c_uint = 0;
 
 /* XRGB8888, native endian.
 * X bits are ignored. */
-pub const RETRO_PIXEL_FORMAT_XRGB8888: ::libc::c_uint = 1;
+pub const RETRO_PIXEL_FORMAT_XRGB8888: c_uint = 1;
 
 /* RGB565, native endian.
 * This pixel format is the recommended format to use if a 15/16-bit
@@ -1738,14 +1740,14 @@ pub const RETRO_PIXEL_FORMAT_XRGB8888: ::libc::c_uint = 1;
 * available on a wide range of low-power devices.
 *
 * It is also natively supported in APIs like OpenGL ES. */
-pub const RETRO_PIXEL_FORMAT_RGB565: ::libc::c_uint = 2;
+pub const RETRO_PIXEL_FORMAT_RGB565: c_uint = 2;
 
 #[allow(dead_code)]
 #[repr(C)]
 pub struct retro_message
 {
-   pub msg: *const ::libc::c_char,  /* Message to be displayed. */
-   pub frames: ::libc::c_uint,      /* Duration in frames of message. */
+   pub msg: *const c_char,  /* Message to be displayed. */
+   pub frames: c_uint,      /* Duration in frames of message. */
 }
 
 /* Describes how the libretro implementation maps a libretro input bind
@@ -1756,15 +1758,15 @@ pub struct retro_message
 pub struct retro_input_descriptor
 {
    /* Associates given parameters with a description. */
-   pub port: ::libc::c_uint,
-   pub device: ::libc::c_uint,
-   pub index: ::libc::c_uint,
-   pub id: ::libc::c_uint,
+   pub port: c_uint,
+   pub device: c_uint,
+   pub index: c_uint,
+   pub id: c_uint,
 
    /* Human readable description for parameters.
     * The pointer must remain valid until
     * retro_unload_game() is called. */
-   pub description: *const ::libc::c_char,
+   pub description: *const c_char,
 }
 
 #[allow(dead_code)]
@@ -1774,11 +1776,11 @@ pub struct retro_system_info
    /* All pointers are owned by libretro implementation, and pointers must 
     * remain valid until retro_deinit() is called. */
 
-   pub library_name: *const ::libc::c_char,     /* Descriptive name of library. Should not 
+   pub library_name: *const c_char,     /* Descriptive name of library. Should not 
                                                    * contain any version numbers, etc. */
-   pub library_version: *const ::libc::c_char,  /* Descriptive version of core. */
+   pub library_version: *const c_char,  /* Descriptive version of core. */
 
-   pub valid_extensions: *const ::libc::c_char, /* A string listing probably content 
+   pub valid_extensions: *const c_char, /* A string listing probably content 
                                                   * extensions the core will be able to 
                                                   * load, separated with pipe.
                                                   * I.e. "bin|rom|iso".
@@ -1809,16 +1811,16 @@ pub struct retro_system_info
 #[repr(C)]
 pub struct retro_game_geometry
 {
-   pub base_width:  ::libc::c_uint,   /* Nominal video width of game. */
-   pub base_height: ::libc::c_uint,   /* Nominal video height of game. */
-   pub max_width:   ::libc::c_uint,   /* Maximum possible width of game. */
-   pub max_height:  ::libc::c_uint,   /* Maximum possible height of game. */
+   pub base_width:  c_uint,   /* Nominal video width of game. */
+   pub base_height: c_uint,   /* Nominal video height of game. */
+   pub max_width:   c_uint,   /* Maximum possible width of game. */
+   pub max_height:  c_uint,   /* Maximum possible height of game. */
 
    pub aspect_ratio: f32,  /* Nominal aspect ratio of game. If
-                        * aspect_ratio is <= 0.0, an aspect ratio
-                        * of base_width / base_height is assumed.
-                        * A frontend could override this setting,
-                        * if desired. */
+                            * aspect_ratio is <= 0.0, an aspect ratio
+                            * of base_width / base_height is assumed.
+                            * A frontend could override this setting,
+                            * if desired. */
 }
 
 #[allow(dead_code)]
@@ -1848,26 +1850,26 @@ pub struct retro_variable
     * delimited by semicolons as so:
     * "key1=value1;key2=value2;..."
     */
-   pub key: *const ::libc::c_char,
+   pub key: *const c_char,
    
    /* Value to be obtained. If key does not exist, it is set to NULL. */
-   pub value: *const ::libc::c_char,
+   pub value: *const c_char,
 }
 
 #[allow(dead_code)]
 #[repr(C)]
 pub struct retro_game_info
 {
-   pub path: *const ::libc::c_char,     /* Path to game, UTF-8 encoded.
-                                           * Usually used as a reference.
-                                           * May be NULL if rom was loaded from stdin
-                                           * or similar. 
-                                           * retro_system_info::need_fullpath guaranteed 
-                                           * that this path is valid. */
-   pub data: *const ::libc::c_char,     /* Memory buffer of loaded game. Will be NULL 
-                                           * if need_fullpath was set. */
-   pub size: ::libc::types::os::arch::c95::size_t,       /* Size of memory buffer. */
-   pub meta: *const ::libc::c_char,     /* String of implementation specific meta-data. */
+   pub path: *const c_char,     /* Path to game, UTF-8 encoded.
+                                  * Usually used as a reference.
+                                  * May be NULL if rom was loaded from stdin
+                                  * or similar. 
+                                  * retro_system_info::need_fullpath guaranteed 
+                                  * that this path is valid. */
+   pub data: *const c_char,     /* Memory buffer of loaded game. Will be NULL 
+                                  * if need_fullpath was set. */
+   pub size: size_t,             /* Size of memory buffer. */
+   pub meta: *const c_char,     /* String of implementation specific meta-data. */
 }
 
 /* Callbacks */
@@ -1875,8 +1877,8 @@ pub struct retro_game_info
 /* Environment callback. Gives implementations a way of performing 
  * uncommon tasks. Extensible. */
 #[allow(non_camel_case_types)]
-pub type retro_environment_t = extern "C" fn (cmd: ::libc::c_uint,
-                                                data: *mut ::libc::c_void) -> u8;
+pub type retro_environment_t = extern "C" fn (cmd: c_uint,
+                                                data: *mut c_void) -> u8;
 
 /* Render a frame. Pixel format is 15-bit 0RGB1555 native endian 
  * unless changed (see RETRO_ENVIRONMENT_SET_PIXEL_FORMAT).
@@ -1890,9 +1892,9 @@ pub type retro_environment_t = extern "C" fn (cmd: ::libc::c_uint,
  * that are not packed in memory.
  */
 #[allow(non_camel_case_types)]
-pub type retro_video_refresh_t = extern "C" fn(data: *const ::libc::c_void,
-                                                 width: ::libc::c_uint,
-                                                 height: ::libc::c_uint,
+pub type retro_video_refresh_t = extern "C" fn(data: *const c_void,
+                                                 width: c_uint,
+                                                 height: c_uint,
                                                  pitch: size_t);
 
 /* Renders a single audio frame. Should only be used if implementation 
@@ -1925,10 +1927,10 @@ pub type retro_input_poll_t = extern "C" fn();
  * will still use the higher level RETRO_DEVICE_JOYPAD to request input.
  */
 #[allow(non_camel_case_types)]
-pub type retro_input_state_t = extern "C" fn(port: ::libc::c_uint,
-                                              device: ::libc::c_uint,
-                                              index: ::libc::c_uint,
-                                              id: ::libc::c_uint)
+pub type retro_input_state_t = extern "C" fn(port: c_uint,
+                                              device: c_uint,
+                                              index: c_uint,
+                                              id: c_uint)
                                               -> i16;
 
 /* Rust does not use function prototypes. Original C prototypes are
