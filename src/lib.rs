@@ -30,7 +30,7 @@ extern crate core;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
-use rust_libretro::*;
+use rust_wrapper::*;
 use core::prelude::*;
 use core::intrinsics::transmute;
 use core::mem::size_of;
