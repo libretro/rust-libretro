@@ -28,6 +28,7 @@
 extern crate libc;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::size_t;
+pub mod libretro;
 
 pub const RETRO_API_VERSION:         ::libc::c_uint = 1;
 
