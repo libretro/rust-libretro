@@ -1,10 +1,8 @@
-#![feature(globs)]
-
 extern crate core;
 use libc::c_uint;
 use libc::types::os::arch::c95::size_t;
-use rust_wrapper::c_header::*;
-pub mod c_header;
+use rust_wrapper::libretro::*;
+pub mod libretro;
 
 // Set up the automatically configured callbacks
 pub static mut retro_video_refresh_cb: Option<retro_video_refresh_t> = None;

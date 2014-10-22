@@ -33,8 +33,8 @@ use libc::types::os::arch::c95::size_t;
 
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 use rust_wrapper::*;
-use rust_wrapper::c_header::retro_system_info;
-use rust_wrapper::c_header::retro_system_av_info;
+use rust_wrapper::libretro::retro_system_info;
+use rust_wrapper::libretro::retro_system_av_info;
 
 use core::prelude::*;
 use core::intrinsics::transmute;

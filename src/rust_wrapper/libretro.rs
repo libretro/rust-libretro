@@ -24,7 +24,6 @@
  * implementations.
  * It is not incremented for compatible changes to the API.
  */
-#![feature(macro_rules)]
 extern crate libc;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::size_t;
