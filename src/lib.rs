@@ -29,14 +29,18 @@ extern crate core;
 
 use libc::types::common::c95::c_void;
 use libc::c_uint;
+use libc::types::os::arch::c95::size_t;
+
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
-use rust_libretro::*;
+use rust_wrapper::*;
+use rust_wrapper::c_header::retro_system_info;
+use rust_wrapper::c_header::retro_system_av_info;
+
 use core::prelude::*;
 use core::intrinsics::transmute;
 use core::mem::size_of;
 
-pub mod rust_libretro;
-
+pub mod rust_wrapper;
 
 static NO_CONTENT: bool = true;
 static _RETRO_PIXEL_FORMAT_RGB1555: u32 = 0;
@@ -70,11 +74,11 @@ pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
 	// println!("hello world: retro_get_system_info");
 	rlibc::memset(transmute(info), 0, size_of::<retro_system_info>());
 
-	(*info).library_name     = "Hello World\0".as_ptr();  // Rust strings are not null terminated
-	(*info).library_version  = "0.0.1\0".as_ptr();        // Null terminate manually
-	(*info).valid_extensions = "\0".as_ptr();
-	(*info).need_fullpath    = false;
-	(*info).block_extract    = false;
+	(*info).library_name     = "Hello World".to_c_str().as_ptr();  // Rust strings are not null terminated
+	(*info).library_version  = "0.0.1".to_c_str().as_ptr();        // Null terminate manually
+	(*info).valid_extensions = "".to_c_str().as_ptr();
+	(*info).need_fullpath    = false as u8;
+	(*info).block_extract    = false as u8;
 }
 
 #[no_mangle]
@@ -273,7 +277,7 @@ pub extern fn retro_run()
 
    unsafe {
       retro_audio_sample_batch_cb.unwrap()(transmute(&audio_buffer), 400);
-		retro_video_refresh_cb.unwrap()(frame_buf, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * 2);
+		retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, SCREEN_WIDTH, SCREEN_HEIGHT, (SCREEN_WIDTH * 2) as size_t);
 	}
 }
 
