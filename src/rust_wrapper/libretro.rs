@@ -20,10 +20,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* Used for checking API/ABI mismatches that can break libretro 
- * implementations.
- * It is not incremented for compatible changes to the API.
- */
 extern crate libc;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::size_t;
@@ -31,6 +27,10 @@ use libc::types::os::arch::c95::c_char;
 use libc::c_uint;
 use libc::c_int;
 
+/* Used for checking API/ABI mismatches that can break libretro 
+ * implementations.
+ * It is not incremented for compatible changes to the API.
+ */
 pub const RETRO_API_VERSION:         c_uint = 1;
 
 /*
