@@ -19,6 +19,7 @@
 //#![no_std]
 #![crate_type = "dylib"]
 #![feature(globs)]
+#![feature(macro_rules)]
 //#![feature(lang_items)]
 //#![feature(asm)]
 extern crate libc;
@@ -29,12 +30,12 @@ extern crate core;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
-use libretro::*;
+use rust_libretro::*;
 use core::prelude::*;
 use core::intrinsics::transmute;
 use core::mem::size_of;
 
-pub mod libretro;
+pub mod rust_libretro;
 
 
 static NO_CONTENT: bool = true;
