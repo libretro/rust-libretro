@@ -16,91 +16,88 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-//#![no_std]
 #![crate_type = "dylib"]
 #![feature(globs)]
 #![feature(macro_rules)]
-//#![feature(lang_items)]
-//#![feature(asm)]
+
 extern crate libc;
 extern crate rlibc;
 extern crate rustrt;
-extern crate core;
 
+use std::mem::size_of;
+use std::mem::transmute;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
 use libc::types::os::arch::c95::size_t;
-
 use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
+
 use rust_wrapper::*;
-use rust_wrapper::libretro::retro_system_info;
-use rust_wrapper::libretro::retro_system_av_info;
-
-use core::prelude::*;
-use core::intrinsics::transmute;
-use core::mem::size_of;
-
 pub mod rust_wrapper;
 
-static NO_CONTENT: bool = true;
-static _RETRO_PIXEL_FORMAT_RGB1555: u32 = 0;
-static _RETRO_PIXEL_FORMAT_RGB565: u32 = 2;
-static _RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: c_uint = 18;
-static _RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: c_uint = 10;
+// Static configuration section.
+// All values must be set for the core to initialize correctly.
+// All strs will be converted to C strings,
+// and any non-ASCII characters removed.
 
-static SCREEN_WIDTH: c_uint = 320;
-static SCREEN_HEIGHT: c_uint = 240;
-static FPS: f64 = 120.0;
-static SAMPLE_RATE: f64 = 48000.0;
+// Name and version number, for display in the frontend GUI.
+static CORE_NAME: &'static str =  "Example Core";
+static CORE_VERSION: &'static str = "0.0.1";
 
-static ASPECT_RATIO: f32 = 1.0;
+// Does the core run without the frontend loading content for it?
+const NO_CONTENT: bool = true;
 
-#[no_mangle]
-pub unsafe extern fn retro_get_system_av_info(info: *mut retro_system_av_info)
-{
-	// println!("hello world: retro_get_system_av_info");
-	(*info).timing.fps = FPS;
-	(*info).timing.sample_rate = SAMPLE_RATE;
-	(*info).geometry.base_width   = SCREEN_WIDTH;
-	(*info).geometry.base_height  = SCREEN_HEIGHT;
-	(*info).geometry.max_width    = SCREEN_WIDTH;
-	(*info).geometry.max_height   = SCREEN_HEIGHT;
-	(*info).geometry.aspect_ratio = ASPECT_RATIO;
-}
+// List of valid extensions for content, separated by pipes. For example:
+// static VALID_EXTENSIONS = "bin|iso";
+// If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
+static VALID_EXTENSIONS: &'static str  = "";
 
-#[no_mangle]
-pub unsafe extern fn retro_get_system_info(info: *mut retro_system_info)
-{
-	// println!("hello world: retro_get_system_info");
-	rlibc::memset(transmute(info), 0, size_of::<retro_system_info>());
+// Initial screen geometry in pixels.
+const AV_SCREEN_WIDTH: u32 = 320;
+const AV_SCREEN_HEIGHT: u32 = 240;
 
-	(*info).library_name     = "Hello World\0".as_ptr() as *const i8;  // Rust strings are not null terminated
-	(*info).library_version  = "0.0.1\0".as_ptr() as *const i8;        // Null terminate manually
-	(*info).valid_extensions = " \0".as_ptr() as *const i8;
-	(*info).need_fullpath    = false as u8;
-	(*info).block_extract    = false as u8;
-}
+// Maximum screen size in pixels.
+// Resizing up to this size is possible without the frontend needing to
+// reinitialize the video driver.
+const AV_MAX_SCREEN_WIDTH: u32 = 320;  
+const AV_MAX_SCREEN_HEIGHT: u32 = 240;
 
-#[no_mangle]
-pub extern fn retro_api_version() -> c_uint
-{
-	// println!("hello world: retro_api_version");
-	return 1;
-}
+// Pixel aspect ratio.
+// This will usually be 1.0 for square pixels.
+const AV_PIXEL_ASPECT: f32 = 1.0;
 
-static mut retro_environment_cb: Option<extern fn (cmd: c_uint, data: *mut u8) -> bool> = None;
-#[no_mangle]
-pub unsafe extern fn retro_set_environment(cb: extern fn (cmd: c_uint, data: *mut u8) -> bool)
-{
-	// println!("hello world: retro_set_environment");
-	retro_environment_cb = Some(cb);
+// Video frame rate, in Hertz. libretro is designed around fixed frame rate
+// cores. Frontend support for frame rates different than the display refresh
+// rate is incomplete, so 60.0fps is a suitable value for maximum compatibility.
+// A consistent frame rate is important as missed frame times will cause visual
+// and audio glitches. Optimization should primarily target worst-case
+// performance, and average-case performance only when it does not significantly
+// harm worst-case performance.
+//
+// API support for frame rates that are integer multiples of the refresh rate
+// will be introduced in future versions of libretro, so please consider
+// designing core logic with support for 720fps, which is an integer multiple of
+// all common display refresh rates. If 720fps is not possible, please consider
+// designing with support for 120fps, which is also highly appreciated by many
+// libretro users.
+const AV_FRAME_RATE: f64 = 60.0;
 
-	let no_content: *mut u8 = transmute(&NO_CONTENT);
-	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, no_content);
+// Audio sampling rate, in Hertz. The frontend is responsible for resampling
+// audio to a rate supported by the hardware, so unusual sampling rates will not
+// cause compatibility problems. It may be convenient to use an integer multiple
+// of the frame rate.
+const AV_SAMPLE_RATE: f64 = 48000.0;
 
-	let pixel_format: *mut u8 = transmute(&_RETRO_PIXEL_FORMAT_RGB565);
-	retro_environment_cb.unwrap()(_RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
-}
+// All AV_* initialization values may be replaced at runtime, using the
+// reset_system_av_info function. This requires an expensive reinitialization
+// so frequent changes are not recommended.
+// TODO: implement reset_system_av_info
+
+// Should the video format be 32 bit XRGB888?
+// This can give increased image quality at the cost of performance and memory
+// use. The default is 16 bit RGB565, which is recommended unless high image
+// quality is required.
+const COLOR_DEPTH_32: bool = false;
+
 
 static mut frame_buf: *mut c_void = 0i as *mut c_void;
 
@@ -112,7 +109,7 @@ pub extern fn retro_init()
 
 	unsafe
 	{
-	frame_buf = libc::malloc(((SCREEN_WIDTH as uint) * (SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
+	frame_buf = libc::malloc(((AV_SCREEN_WIDTH as uint) * (AV_SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
 	// println!("frame_buf: {}", frame_buf);
 	}
 
@@ -152,7 +149,7 @@ pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 fn image_loader()
 {
    unsafe {
-   	rlibc::memcpy(transmute(frame_buf), transmute(&RAWIMAGE[0]), (SCREEN_WIDTH * SCREEN_HEIGHT * 2) as uint);
+   	rlibc::memcpy(transmute(frame_buf), transmute(&RAWIMAGE[0]), (AV_SCREEN_WIDTH * AV_SCREEN_HEIGHT * 2) as uint);
    }
 }
 
@@ -206,7 +203,7 @@ GState
 
 unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
 {
-      transmute(core::raw::Slice {data: base as *const T, len: length})
+      transmute(std::raw::Slice {data: base as *const T, len: length})
 }
 
 #[no_mangle]
@@ -249,7 +246,7 @@ pub extern fn retro_run()
       g.y = g.y - 1;
    }
 
-   if (down == 1) && ((g.y) < (SCREEN_HEIGHT - 1))
+   if (down == 1) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
    {
       g.y = g.y + 1;
    }
@@ -259,7 +256,7 @@ pub extern fn retro_run()
       g.x = g.x - 1;
    }
 
-   if (right == 1) && ((g.x) < (SCREEN_WIDTH - 1))
+   if (right == 1) && ((g.x) < (AV_SCREEN_WIDTH - 1))
    {
       g.x = g.x + 1;
    }
@@ -277,7 +274,7 @@ pub extern fn retro_run()
 
    unsafe {
       retro_audio_sample_batch_cb.unwrap()(transmute(&audio_buffer), 400);
-		retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, SCREEN_WIDTH, SCREEN_HEIGHT, (SCREEN_WIDTH * 2) as size_t);
+		retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, (AV_SCREEN_WIDTH * 2) as size_t);
 	}
 }
 
@@ -292,6 +289,6 @@ fn render_audio(buffer: &mut[u16, ..800], vol: f32, phase: &mut f32)
 
 fn write_pixel(x: u32, y: u32)
 {
-   let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, SCREEN_WIDTH as uint * SCREEN_HEIGHT as uint)};
-   buf_slice[x as uint + y as uint * SCREEN_WIDTH as uint] = 0xffff;   
+   let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, AV_SCREEN_WIDTH as uint * AV_SCREEN_HEIGHT as uint)};
+   buf_slice[x as uint + y as uint * AV_SCREEN_WIDTH as uint] = 0xffff;   
 }
