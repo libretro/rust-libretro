@@ -47,7 +47,7 @@ static CORE_VERSION: &'static str = "0.0.1";
 const NO_CONTENT: bool = true;
 
 // List of valid extensions for content, separated by pipes. For example:
-// static VALID_EXTENSIONS = "bin|iso";
+// static VALID_EXTENSIONS: &'static str = "bin|iso";
 // If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
 static VALID_EXTENSIONS: &'static str  = "";
 
@@ -65,21 +65,36 @@ const AV_MAX_SCREEN_HEIGHT: u32 = 240;
 // This will usually be 1.0 for square pixels.
 const AV_PIXEL_ASPECT: f32 = 1.0;
 
-// Video frame rate, in Hertz. libretro is designed around fixed frame rate
-// cores. Frontend support for frame rates different than the display refresh
-// rate is incomplete, so 60.0fps is a suitable value for maximum compatibility.
-// A consistent frame rate is important as missed frame times will cause visual
-// and audio glitches. Optimization should primarily target worst-case
-// performance, and average-case performance only when it does not significantly
-// harm worst-case performance.
+// Libretro is designed around fixed frame rate cores. To allow for maximum
+// compatibility with various display refresh rates, rust-libretro uses a
+// threaded rendering architecture, where a snapshot of video related state is
+// saved periodically and used to render a video frame asychronously.
 //
-// API support for frame rates that are integer multiples of the refresh rate
-// will be introduced in future versions of libretro, so please consider
-// designing core logic with support for 720fps, which is an integer multiple of
-// all common display refresh rates. If 720fps is not possible, please consider
-// designing with support for 120fps, which is also highly appreciated by many
-// libretro users.
-const AV_FRAME_RATE: f64 = 60.0;
+// Core logic rate is one of three supported values:
+// LogicRate60 (60Hz)
+// LogicRate120 (120Hz)
+// LogicRate720 (720Hz)
+//
+// rust-libretro automatically generates a core option to allow the user to
+// choose a frame rate from a selection of integer divisions of the core
+// logic rate. The default is always 60Hz for maximum compatibility with common
+// 60Hz refresh rate displays. 
+//
+// Please choose the highest core logic rate possible for your target hardware.
+// 720Hz core logic rate has excellent compatibility with all common displays,
+// as it is an integer multiple of all common refresh rates, or close enough
+// that the frontend can slightly adjust the core speed and resample the audio
+// for an exact match. If your core has particularly intensive CPU requirements,
+// for example complicated physics simulation, you may require a lower core
+// logic rate.
+//
+// Future versions of libretro will include support for automatic configuration
+// of the frame rate, support for tuning of the video latency to trade off
+// latency with performance, support for polling input at the full core logic
+// rate to minimize control latency and jitter, and compatibility of input
+// recordings between all frame rates. Chosing a 720Hz core logic rate will give
+// you the maximum benefit from these improvements.
+const CORE_LOGIC_RATE: CoreLogicRate = LogicRate720;
 
 // Audio sampling rate, in Hertz. The frontend is responsible for resampling
 // audio to a rate supported by the hardware, so unusual sampling rates will not
@@ -94,7 +109,7 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 
 // Should the video format be 32 bit XRGB888?
 // This can give increased image quality at the cost of performance and memory
-// use. The default is 16 bit RGB565, which is recommended unless high image
+// use. The default is 16 bit RGB565, which is recommended unless higher image
 // quality is required.
 const COLOR_DEPTH_32: bool = false;
 

@@ -3,6 +3,9 @@ use libc::c_uint;
 use libc::types::os::arch::c95::size_t;
 use std::mem::transmute;
 use libc::types::common::c95::c_void;
+use libc::types::os::arch::c95::c_char;
+
+
 use rust_wrapper::libretro::*;
 pub mod libretro;
 
@@ -46,11 +49,29 @@ pub unsafe extern "C" fn retro_set_input_state(cb: retro_input_state_t)
 static NO_CONTENT_FLAG: u8  = true as u8;
 static REQUIRED_CONTENT_FLAG: u8 = false as u8;
 
+static mut retro_variables: [retro_variable, ..2] = [retro_variable {key: 0u as *const c_char, value: 0u as *const c_char}, ..2];
+
+pub enum CoreLogicRate {
+    LogicRate60,
+    LogicRate120,
+    LogicRate720,
+}
+
+static REFRESH_RATE_KEY: &'static str = "refresh_rate\0";
+static LOW_REFRESH_RATE_VALUES: &'static str =
+    "Display Refresh Rate; 60|30\0";
+static MEDIUM_REFRESH_RATE_VALUES: &'static str =
+    "Display Refresh Rate; 60|120|30\0";
+static HIGH_REFRESH_RATE_VALUES: &'static str =
+    "Display Refresh Rate; 60|120|144|180|240|24|30|51.4|72|80|90|102.9|\0";
+
+static mut display_refresh_rate: u32 = 0;
+
 static mut retro_environment_cb: Option<retro_environment_t> = None;
 #[no_mangle]
 pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
 {
-    use super::NO_CONTENT;
+    use super::{NO_CONTENT, CORE_LOGIC_RATE};
     
     retro_environment_cb = Some(cb);
     
@@ -60,10 +81,31 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
         } else {
             transmute(&REQUIRED_CONTENT_FLAG)
         };
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, no_content);
+    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,
+                                  no_content);
+
+    let keyptr = REFRESH_RATE_KEY.as_ptr() as *const i8;
     
-    let pixel_format: *mut c_void = transmute(&RETRO_PIXEL_FORMAT_RGB565);
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
+    match CORE_LOGIC_RATE {
+        LogicRate60 => {
+            retro_variables[0] = retro_variable { key: keyptr,
+                                   value: LOW_REFRESH_RATE_VALUES.as_ptr()
+                                   as *const i8, }
+        }
+        LogicRate120 => {
+            retro_variables[0] = retro_variable { key: keyptr,
+                                   value: MEDIUM_REFRESH_RATE_VALUES.as_ptr()
+                                   as *const i8, }
+        }
+        LogicRate720 => {
+            retro_variables[0] = retro_variable { key: keyptr,
+                                   value: HIGH_REFRESH_RATE_VALUES.as_ptr() as
+                                   *const i8, }
+        }
+    }
+    
+    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_VARIABLES,
+                                  retro_variables.as_mut_ptr() as *mut c_void);
 }
 
 
@@ -71,10 +113,8 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_MAX_SCREEN_WIDTH,
-                AV_MAX_SCREEN_HEIGHT, AV_PIXEL_ASPECT, AV_FRAME_RATE,
+                AV_MAX_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
                 AV_SAMPLE_RATE};
-    #[static_assert]
-    static _A1: bool = AV_FRAME_RATE > 0.0;
     #[static_assert]
     static _A2: bool = AV_SCREEN_HEIGHT <= AV_MAX_SCREEN_HEIGHT;
     #[static_assert]
@@ -84,17 +124,21 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     #[static_assert]
     static _A5: bool = AV_SCREEN_WIDTH > 0;
     #[static_assert]
-    static _A6: bool = AV_FRAME_RATE > 0.0;
-    #[static_assert]
     static _A7: bool = AV_PIXEL_ASPECT > 0.0;
- 
-    (*info).timing.fps = AV_FRAME_RATE;
+
+    
+    
+    (*info).timing.fps = 120.0;
     (*info).timing.sample_rate = AV_SAMPLE_RATE;
     (*info).geometry.base_width   = AV_SCREEN_WIDTH;
     (*info).geometry.base_height  = AV_SCREEN_HEIGHT;
     (*info).geometry.max_width    = AV_MAX_SCREEN_WIDTH;
     (*info).geometry.max_height   = AV_MAX_SCREEN_HEIGHT;
     (*info).geometry.aspect_ratio = AV_PIXEL_ASPECT;
+
+    // TODO selectable PIXEL_FORMAT
+    let pixel_format: *mut c_void = transmute(&RETRO_PIXEL_FORMAT_RGB565);
+    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
 #[no_mangle]
