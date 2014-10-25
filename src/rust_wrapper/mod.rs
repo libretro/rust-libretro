@@ -85,25 +85,15 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
                                   no_content);
 
     let keyptr = REFRESH_RATE_KEY.as_ptr() as *const i8;
-    
-    match CORE_LOGIC_RATE {
-        LogicRate60 => {
-            retro_variables[0] = retro_variable { key: keyptr,
-                                   value: LOW_REFRESH_RATE_VALUES.as_ptr()
-                                   as *const i8, }
-        }
-        LogicRate120 => {
-            retro_variables[0] = retro_variable { key: keyptr,
-                                   value: MEDIUM_REFRESH_RATE_VALUES.as_ptr()
-                                   as *const i8, }
-        }
-        LogicRate720 => {
-            retro_variables[0] = retro_variable { key: keyptr,
-                                   value: HIGH_REFRESH_RATE_VALUES.as_ptr() as
-                                   *const i8, }
-        }
-    }
-    
+
+    retro_variables[0] =
+        retro_variable { key: keyptr,
+                         value: match CORE_LOGIC_RATE {
+                             LogicRate60 => LOW_REFRESH_RATE_VALUES,
+                             LogicRate120 => MEDIUM_REFRESH_RATE_VALUES,
+                             LogicRate720 => HIGH_REFRESH_RATE_VALUES,
+                             }.as_ptr() as *const i8 };
+        
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_VARIABLES,
                                   retro_variables.as_mut_ptr() as *mut c_void);
 }
