@@ -51,7 +51,7 @@ const NO_CONTENT: bool = true;
 // If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
 static VALID_EXTENSIONS: &'static str  = "";
 
-// Initial screen geometry in pixels.
+// Initial screen size in pixels.
 const AV_SCREEN_WIDTH: u32 = 320;
 const AV_SCREEN_HEIGHT: u32 = 240;
 
@@ -201,10 +201,10 @@ pub unsafe extern fn retro_deinit()
 
 struct GState
 {
-	frame: uint,
-   x: u32,
-   y: u32,
-   phase: f32
+    frame: uint,
+    x: u32,
+    y: u32,
+    phase: f32
 }
 
 static mut g_state: GState =

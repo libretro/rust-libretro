@@ -1,10 +1,11 @@
-extern crate core;
 use libc::c_uint;
-use libc::types::os::arch::c95::size_t;
+use libc::size_t;
 use std::mem::transmute;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
-
+use std::ptr::null_mut;
+use std::mem::size_of;
+use libc::malloc;
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -63,7 +64,7 @@ static LOW_REFRESH_RATE_VALUES: &'static str =
 static MEDIUM_REFRESH_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|30\0";
 static HIGH_REFRESH_RATE_VALUES: &'static str =
-    "Display Refresh Rate; 60|120|144|180|240|24|30|51.4|72|80|90|102.9|\0";
+    "Display Refresh Rate; 60|120|144|180|240|24|30|48|51.4|72|80|90|102.9|\0";
 
 static mut display_refresh_rate: u32 = 0;
 
@@ -141,19 +142,65 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
+struct StaticSystemInfo
+{
+    name: *mut c_char,
+    version: *mut c_char,
+    extensions: *mut c_char,
+}
+
+static mut static_system_info: StaticSystemInfo = StaticSystemInfo
+{
+    name: 0u8 as *mut c_char,
+    version: 0u8 as *mut c_char,
+    extensions: 0u8 as *mut c_char,
+};
+
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 {
     use super::{CORE_NAME, CORE_VERSION, VALID_EXTENSIONS};
 
-    // TODO: is this memset really necessary?
-    // rlibc::memset(transmute(info), 0, size_of::<retro_system_info>());
+    malloc_ascii_cstring(&mut static_system_info.name, CORE_NAME);
+    malloc_ascii_cstring(&mut static_system_info.version, CORE_VERSION);
+    malloc_ascii_cstring(&mut static_system_info.extensions, VALID_EXTENSIONS);
 
-    (*info).library_name     = "Hello World\0".as_ptr() as *const i8;  // Rust strings are not null terminated
-    (*info).library_version  = "0.0.1\0".as_ptr() as *const i8;        // Null terminate manually
-    (*info).valid_extensions = " \0".as_ptr() as *const i8;
+    (*info).library_name     = static_system_info.name as *const c_char;
+    (*info).library_version  = static_system_info.version as *const c_char;
+    (*info).valid_extensions = static_system_info.extensions as *const c_char;
     (*info).need_fullpath    = false as u8;
     (*info).block_extract    = false as u8;
+}
+
+unsafe fn malloc_ascii_cstring(dst: &mut *mut c_char, src: &'static str)
+{
+    if *dst != 0u8 as *mut c_char { return; }
+    let terminated_max_len = (src.as_bytes().len() + 1) as size_t;
+    *dst = malloc(terminated_max_len) as *mut c_char;
+    strip_utf_strlcpy(*dst, src.as_bytes(), terminated_max_len);
+}
+
+unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
+{
+    if dst_size == 0 { return; }
+    if dst_size == 1
+    {
+        *dst = 0i8;
+        return;
+    }
+    
+    let mut dst_offset: int = 0;
+    let dst_last = dst_size - 1; // reserve space for NULL terminator
+    for src_byte in src.iter()
+    {
+        if (*src_byte & 0x80) == 0
+        {
+            *dst.offset(dst_offset) = *src_byte as i8;
+            dst_offset = dst_offset + 1;
+            if dst_offset == dst_last as int { break; }
+        }
+    }
+    *dst.offset(dst_offset) = 0i8;
 }
 
 
@@ -180,7 +227,7 @@ pub extern "C" fn retro_unload_game() {}
 #[no_mangle]
 pub extern "C" fn retro_get_region() -> c_uint { RETRO_REGION_NTSC }
 #[no_mangle]
-pub extern "C" fn retro_get_memory_data(_id: c_uint) -> *mut u8 {	core::ptr::null_mut() }
+pub extern "C" fn retro_get_memory_data(_id: c_uint) -> *mut u8 { null_mut() }
 #[no_mangle]
 pub extern "C" fn retro_get_memory_size(_id: c_uint) -> size_t { 0 }
 #[no_mangle]
