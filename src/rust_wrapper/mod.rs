@@ -5,6 +5,7 @@ use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
 use std::ptr::null_mut;
 use libc::malloc;
+use std::c_str::CString;
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -53,9 +54,9 @@ static mut retro_variables: [retro_variable, ..2] =
     [retro_variable {key: 0u as *const c_char, value: 0u as *const c_char}, ..2];
 
 pub enum CoreLogicRate {
-    LogicRate60,
-    LogicRate120,
-    LogicRate720,
+    LogicRate60 = 60,
+    LogicRate120 = 120,
+    LogicRate720 = 720,
 }
 
 static REFRESH_RATE_KEY: &'static str = "refresh_rate\0";
@@ -65,8 +66,6 @@ static MEDIUM_REFRESH_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|30\0";
 static HIGH_REFRESH_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|144|180|240|24|30|48|51.4|72|80|90|102.9|\0";
-
-static mut display_refresh_rate: u32 = 0;
 
 static mut retro_environment_cb: Option<retro_environment_t> = None;
 #[no_mangle]
@@ -109,12 +108,11 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
                                   retro_variables.as_mut_ptr() as *mut c_void);
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
-                AV_SAMPLE_RATE, COLOR_DEPTH_32};
+                AV_SAMPLE_RATE, COLOR_DEPTH_32, CORE_LOGIC_RATE};
     #[static_assert]
     static _A1: bool = AV_SCREEN_HEIGHT > 0;
     #[static_assert]
@@ -122,9 +120,63 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     #[static_assert]
     static _A3: bool = AV_PIXEL_ASPECT > 0.0;
 
+    let get_variable =
+        retro_variable {key: REFRESH_RATE_KEY.as_ptr() as *const i8,
+                        value: 0u as *const c_char};
+
+    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
+                                  transmute(&get_variable));
+
+    let refresh_rate = CString::new(transmute(&get_variable.value), false);
+    let frame_mult: Option<u32> = if refresh_rate.as_str().is_some()
+    {
+        let refresh_slice: &str = refresh_rate.as_str().unwrap();
+        match CORE_LOGIC_RATE {
+            LogicRate60 =>
+                match refresh_slice {
+                    "30" => Some(2),
+                    "60" => Some(1),
+                    _ => None,
+                },
+            LogicRate120 =>
+                match refresh_slice {
+                    "30" => Some(4),
+                    "60" => Some(2),
+                    "120" => Some(1),
+                    _ => None,
+                },
+            LogicRate720 =>
+                match refresh_slice {
+                    "24" => Some(30),
+                    "30" => Some(24),
+                    "48" => Some(15),
+                    "51.4" => Some(14),
+                    "60" => Some(12),
+                    "72" => Some(10),
+                    "80" => Some(9),
+                    "90" => Some(8),
+                    "102.9" => Some(7),
+                    "120" => Some(6),
+                    "144" => Some(5),
+                    "180" => Some(4),
+                    "240" => Some(3),
+                    _ => None,
+                }
+        }
+    }
+    else { None };
+
+    if frame_mult.is_some()
+    {
+        (*info).timing.fps = CORE_LOGIC_RATE as u32 as f64 /
+            frame_mult.unwrap() as f64;
+    }
+    else
+    {
+        (*info).timing.fps = 60.0;
+        // TODO Something went horribly wrong
+    }
     
-    
-    (*info).timing.fps = 120.0;
     (*info).timing.sample_rate = AV_SAMPLE_RATE;
     (*info).geometry.base_width   = AV_SCREEN_WIDTH;
     (*info).geometry.base_height  = AV_SCREEN_HEIGHT;
