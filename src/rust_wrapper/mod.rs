@@ -127,7 +127,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
                                   transmute(&get_variable));
 
-    let refresh_rate = CString::new(transmute(&get_variable.value), false);
+    let refresh_rate = CString::new(transmute(get_variable.value), false);
     let frame_mult: Option<u32> = if refresh_rate.as_str().is_some()
     {
         let refresh_slice: &str = refresh_rate.as_str().unwrap();
@@ -174,6 +174,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     else
     {
         (*info).timing.fps = 60.0;
+        fail!("Core option error");
         // TODO Something went horribly wrong
     }
     
