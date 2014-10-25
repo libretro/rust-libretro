@@ -4,7 +4,6 @@ use std::mem::transmute;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
 use std::ptr::null_mut;
-use std::mem::size_of;
 use libc::malloc;
 
 use rust_wrapper::libretro::*;
@@ -50,7 +49,8 @@ pub unsafe extern "C" fn retro_set_input_state(cb: retro_input_state_t)
 static NO_CONTENT_FLAG: u8  = true as u8;
 static REQUIRED_CONTENT_FLAG: u8 = false as u8;
 
-static mut retro_variables: [retro_variable, ..2] = [retro_variable {key: 0u as *const c_char, value: 0u as *const c_char}, ..2];
+static mut retro_variables: [retro_variable, ..2] =
+    [retro_variable {key: 0u as *const c_char, value: 0u as *const c_char}, ..2];
 
 pub enum CoreLogicRate {
     LogicRate60,
@@ -115,17 +115,17 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_MAX_SCREEN_WIDTH,
                 AV_MAX_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
-                AV_SAMPLE_RATE};
+                AV_SAMPLE_RATE, COLOR_DEPTH_32};
     #[static_assert]
-    static _A2: bool = AV_SCREEN_HEIGHT <= AV_MAX_SCREEN_HEIGHT;
+    static _A1: bool = AV_SCREEN_HEIGHT <= AV_MAX_SCREEN_HEIGHT;
     #[static_assert]
-    static _A3: bool = AV_SCREEN_WIDTH <= AV_MAX_SCREEN_WIDTH;
+    static _A2: bool = AV_SCREEN_WIDTH <= AV_MAX_SCREEN_WIDTH;
     #[static_assert]
-    static _A4: bool = AV_SCREEN_HEIGHT > 0;
+    static _A3: bool = AV_SCREEN_HEIGHT > 0;
     #[static_assert]
-    static _A5: bool = AV_SCREEN_WIDTH > 0;
+    static _A4: bool = AV_SCREEN_WIDTH > 0;
     #[static_assert]
-    static _A7: bool = AV_PIXEL_ASPECT > 0.0;
+    static _A5: bool = AV_PIXEL_ASPECT > 0.0;
 
     
     
@@ -137,8 +137,14 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     (*info).geometry.max_height   = AV_MAX_SCREEN_HEIGHT;
     (*info).geometry.aspect_ratio = AV_PIXEL_ASPECT;
 
-    // TODO selectable PIXEL_FORMAT
-    let pixel_format: *mut c_void = transmute(&RETRO_PIXEL_FORMAT_RGB565);
+    let pixel_format: *mut c_void = if COLOR_DEPTH_32
+    {
+        transmute(&RETRO_PIXEL_FORMAT_XRGB8888)
+    }
+    else
+    {
+        transmute(&RETRO_PIXEL_FORMAT_RGB565)
+    };
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
