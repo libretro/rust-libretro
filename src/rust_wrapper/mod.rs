@@ -113,19 +113,14 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
-    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_MAX_SCREEN_WIDTH,
-                AV_MAX_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
+    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
                 AV_SAMPLE_RATE, COLOR_DEPTH_32};
     #[static_assert]
-    static _A1: bool = AV_SCREEN_HEIGHT <= AV_MAX_SCREEN_HEIGHT;
+    static _A1: bool = AV_SCREEN_HEIGHT > 0;
     #[static_assert]
-    static _A2: bool = AV_SCREEN_WIDTH <= AV_MAX_SCREEN_WIDTH;
+    static _A2: bool = AV_SCREEN_WIDTH > 0;
     #[static_assert]
-    static _A3: bool = AV_SCREEN_HEIGHT > 0;
-    #[static_assert]
-    static _A4: bool = AV_SCREEN_WIDTH > 0;
-    #[static_assert]
-    static _A5: bool = AV_PIXEL_ASPECT > 0.0;
+    static _A3: bool = AV_PIXEL_ASPECT > 0.0;
 
     
     
@@ -133,8 +128,8 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     (*info).timing.sample_rate = AV_SAMPLE_RATE;
     (*info).geometry.base_width   = AV_SCREEN_WIDTH;
     (*info).geometry.base_height  = AV_SCREEN_HEIGHT;
-    (*info).geometry.max_width    = AV_MAX_SCREEN_WIDTH;
-    (*info).geometry.max_height   = AV_MAX_SCREEN_HEIGHT;
+    (*info).geometry.max_width    = AV_SCREEN_WIDTH;
+    (*info).geometry.max_height   = AV_SCREEN_HEIGHT;
     (*info).geometry.aspect_ratio = AV_PIXEL_ASPECT;
 
     let pixel_format: *mut c_void = if COLOR_DEPTH_32

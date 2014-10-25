@@ -49,15 +49,9 @@ const NO_CONTENT: bool = true;
 // If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
 static VALID_EXTENSIONS: &'static str  = "";
 
-// Initial screen size in pixels.
+// Screen size in pixels.
 const AV_SCREEN_WIDTH: u32 = 320;
 const AV_SCREEN_HEIGHT: u32 = 240;
-
-// Maximum screen size in pixels.
-// Resizing up to this size is possible without the frontend needing to
-// reinitialize the video driver.
-const AV_MAX_SCREEN_WIDTH: u32 = 320;  
-const AV_MAX_SCREEN_HEIGHT: u32 = 240;
 
 // Pixel aspect ratio.
 // This will usually be 1.0 for square pixels.
@@ -99,11 +93,6 @@ const CORE_LOGIC_RATE: CoreLogicRate = LogicRate720;
 // cause compatibility problems. It may be convenient to use an integer multiple
 // of the frame rate.
 const AV_SAMPLE_RATE: f64 = 48000.0;
-
-// All AV_* initialization values may be replaced at runtime, using the
-// reset_system_av_info function. This requires an expensive reinitialization
-// so frequent changes are not recommended.
-// TODO: implement reset_system_av_info
 
 // Should the video format be 32 bit XRGB888?
 // This can give increased image quality at the cost of performance and memory
