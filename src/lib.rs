@@ -33,8 +33,8 @@ pub mod rust_wrapper;
 
 // Static configuration section.
 // All values must be set for the core to initialize correctly.
-// All strs will be converted to C strings,
-// and any non-ASCII characters removed.
+// All strs will be converted to C strings, and any non-ASCII characters will be
+// removed.
 
 // Name and version number, for display in the frontend GUI.
 static CORE_NAME: &'static str =  "Example Core";
@@ -58,11 +58,10 @@ const AV_SCREEN_HEIGHT: u32 = 240;
 // This will usually be 1.0 for square pixels.
 const AV_PIXEL_ASPECT: f32 = 1.0;
 
-// Libretro is designed around fixed frame rate cores. To allow for maximum
-// compatibility with various display refresh rates, rust-libretro uses a
-// threaded rendering architecture, where a snapshot of video related state is
-// saved after a fixed number of core logic updates and used to render a
-// video frame asychronously.
+// Libretro is designed around fixed frame rate cores. For maximum compatibility
+// with various display refresh rates, rust-libretro uses threaded rendering,
+// where a snapshot of video related state is saved after a fixed number of core
+// logic updates and used to render a video frame asychronously.
 //
 // Core logic rate is one of three supported values:
 // LogicRate60 (60Hz)
@@ -98,8 +97,8 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 
 // Should the video format be 32 bit XRGB888?
 // This can give increased image quality at the cost of performance and memory
-// use. The default is 16 bit RGB565, which is recommended unless higher image
-// quality is required.
+// use. The default is 16 bit RGB565, which is recommended unless you require
+// higher image quality.
 const COLOR_DEPTH_32: bool = false;
 
 
