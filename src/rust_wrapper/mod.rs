@@ -5,7 +5,10 @@ use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
 use std::ptr::null_mut;
 use libc::malloc;
+use libc::free;
 use std::c_str::CString;
+use std::mem::size_of;
+
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -59,12 +62,12 @@ pub enum CoreLogicRate {
     LogicRate720 = 720,
 }
 
-static REFRESH_RATE_KEY: &'static str = "refresh_rate\0";
-static LOW_REFRESH_RATE_VALUES: &'static str =
+static FRAME_RATE_KEY: &'static str = "refresh_rate\0";
+static LOW_FRAME_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|30\0";
-static MEDIUM_REFRESH_RATE_VALUES: &'static str =
+static MEDIUM_FRAME_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|30\0";
-static HIGH_REFRESH_RATE_VALUES: &'static str =
+static HIGH_FRAME_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|144|180|240|24|30|48|51.4|72|80|90|102.9|\0";
 
 static mut retro_environment_cb: Option<retro_environment_t> = None;
@@ -84,15 +87,15 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,
                                   no_content);
 
-    let keyptr = REFRESH_RATE_KEY.as_ptr() as *const i8;
+    let keyptr = FRAME_RATE_KEY.as_ptr() as *const i8;
 
     retro_variables[0] =
         retro_variable { key: keyptr,
                          value: match CORE_LOGIC_RATE {
-                             LogicRate60 => LOW_REFRESH_RATE_VALUES,
-                             LogicRate120 => MEDIUM_REFRESH_RATE_VALUES,
-                             LogicRate720 => HIGH_REFRESH_RATE_VALUES,
-                             }.as_ptr() as *const i8 };
+                             LogicRate60 => LOW_FRAME_RATE_VALUES,
+                             LogicRate120 => MEDIUM_FRAME_RATE_VALUES,
+                             LogicRate720 => HIGH_FRAME_RATE_VALUES,
+                             }.as_ptr() as *const c_char };
         
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_VARIABLES,
                                   retro_variables.as_mut_ptr() as *mut c_void);
@@ -111,7 +114,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     static _A3: bool = AV_PIXEL_ASPECT > 0.0;
 
     let get_variable =
-        retro_variable {key: REFRESH_RATE_KEY.as_ptr() as *const i8,
+        retro_variable {key: FRAME_RATE_KEY.as_ptr() as *const i8,
                         value: 0u as *const c_char};
 
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
@@ -247,6 +250,28 @@ unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
     *dst.offset(dst_offset) = 0i8;
 }
 
+pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
+
+
+#[no_mangle]
+pub unsafe extern "C" fn retro_init()
+{
+    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT};
+    frame_buf = malloc(((AV_SCREEN_WIDTH as uint) * (AV_SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn retro_deinit()
+{
+    free(frame_buf);
+    if static_system_info.name != 0u8 as *mut c_char
+        { free(static_system_info.name as *mut c_void); }
+    if static_system_info.version != 0u8 as *mut c_char
+        { free(static_system_info.version as *mut c_void); }
+    if static_system_info.extensions != 0u8 as *mut c_char
+        { free(static_system_info.extensions as *mut c_void); }
+}
 
 // implement stubs for mandatory extern functions
 

@@ -24,7 +24,6 @@ extern crate libc;
 extern crate rlibc;
 extern crate rustrt;
 
-use std::mem::size_of;
 use std::mem::transmute;
 use libc::types::common::c95::c_void;
 use libc::c_uint;
@@ -49,7 +48,9 @@ const NO_CONTENT: bool = true;
 // If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
 static VALID_EXTENSIONS: &'static str  = "";
 
-// Screen size in pixels.
+// Core screen size in pixels.
+// Frontends provide various options for upscaling if this is lower than the
+// display resolution.
 const AV_SCREEN_WIDTH: u32 = 320;
 const AV_SCREEN_HEIGHT: u32 = 240;
 
@@ -60,7 +61,8 @@ const AV_PIXEL_ASPECT: f32 = 1.0;
 // Libretro is designed around fixed frame rate cores. To allow for maximum
 // compatibility with various display refresh rates, rust-libretro uses a
 // threaded rendering architecture, where a snapshot of video related state is
-// saved periodically and used to render a video frame asychronously.
+// saved after a fixed number of core logic updates and used to render a
+// video frame asychronously.
 //
 // Core logic rate is one of three supported values:
 // LogicRate60 (60Hz)
@@ -69,7 +71,7 @@ const AV_PIXEL_ASPECT: f32 = 1.0;
 //
 // rust-libretro automatically generates a core option to allow the user to
 // choose a frame rate from a selection of integer divisions of the core
-// logic rate. The default is always 60Hz for maximum compatibility with common
+// logic rate. The default is always 60fps for maximum compatibility with common
 // 60Hz refresh rate displays. 
 //
 // Please choose the highest core logic rate possible for your target hardware.
@@ -101,17 +103,8 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 const COLOR_DEPTH_32: bool = false;
 
 
-static mut frame_buf: *mut c_void = 0i as *mut c_void;
 
-#[no_mangle]
-pub extern fn retro_init()
-{	
-	unsafe
-	{
-	frame_buf = libc::malloc(((AV_SCREEN_WIDTH as uint) * (AV_SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
-        }
-	image_loader();
-}
+
 
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 
@@ -123,11 +116,6 @@ fn image_loader()
 }
 
 
-#[no_mangle]
-pub unsafe extern fn retro_deinit()
-{
-    libc::free(frame_buf);
-}
 
 struct GState
 {
@@ -154,9 +142,7 @@ unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T]
 #[no_mangle]
 pub extern fn retro_run()
 {
-    // TODO how to combine this into one statement?
-    let g_tmp = unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)};
-    let g = &mut g_tmp[0];
+    let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
     
     unsafe {retro_input_poll_cb.unwrap()();}
     
