@@ -9,7 +9,6 @@ use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
 
-
 use rust_wrapper::libretro::*;
 pub mod libretro;
 
@@ -113,52 +112,8 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     #[static_assert]
     static _A3: bool = AV_PIXEL_ASPECT > 0.0;
 
-    let get_variable =
-        retro_variable {key: FRAME_RATE_KEY.as_ptr() as *const i8,
-                        value: 0u as *const c_char};
-
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
-                                  transmute(&get_variable));
-
-    let refresh_rate = CString::new(transmute(get_variable.value), false);
-    let frame_mult: Option<u32> = if refresh_rate.as_str().is_some()
-    {
-        let refresh_slice: &str = refresh_rate.as_str().unwrap();
-        match CORE_LOGIC_RATE {
-            LogicRate60 =>
-                match refresh_slice {
-                    "30" => Some(2),
-                    "60" => Some(1),
-                    _ => None,
-                },
-            LogicRate120 =>
-                match refresh_slice {
-                    "30" => Some(4),
-                    "60" => Some(2),
-                    "120" => Some(1),
-                    _ => None,
-                },
-            LogicRate720 =>
-                match refresh_slice {
-                    "24" => Some(30),
-                    "30" => Some(24),
-                    "48" => Some(15),
-                    "51.4" => Some(14),
-                    "60" => Some(12),
-                    "72" => Some(10),
-                    "80" => Some(9),
-                    "90" => Some(8),
-                    "102.9" => Some(7),
-                    "120" => Some(6),
-                    "144" => Some(5),
-                    "180" => Some(4),
-                    "240" => Some(3),
-                    _ => None,
-                }
-        }
-    }
-    else { None };
-
+    let frame_mult = get_frame_mult();
+    
     if frame_mult.is_some()
     {
         (*info).timing.fps = CORE_LOGIC_RATE as u32 as f64 /
@@ -168,9 +123,8 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     {
         (*info).timing.fps = 60.0;
         fail!("Core option error");
-        // TODO Something went horribly wrong
     }
-    
+ 
     (*info).timing.sample_rate = AV_SAMPLE_RATE;
     (*info).geometry.base_width   = AV_SCREEN_WIDTH;
     (*info).geometry.base_height  = AV_SCREEN_HEIGHT;
@@ -188,6 +142,59 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     };
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
+
+fn get_frame_mult() -> Option<u32>
+{
+    use super::CORE_LOGIC_RATE;
+
+    let get_variable =
+        retro_variable {key: FRAME_RATE_KEY.as_ptr() as *const i8,
+                        value: 0u as *const c_char};
+    
+    unsafe { retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
+                                           transmute(&get_variable)); }
+    let refresh_rate =
+        unsafe { CString::new(transmute(get_variable.value), false) };
+       
+    if refresh_rate.as_str().is_some()
+    {
+        let refresh_slice: &str = refresh_rate.as_str().unwrap();
+        match CORE_LOGIC_RATE {
+            LogicRate60 =>
+                match refresh_slice {
+                    "30" => Some(2u32),
+                    "60" => Some(1u32),
+                    _ => None,
+                },
+            LogicRate120 =>
+                match refresh_slice {
+                    "30" => Some(4u32),
+                    "60" => Some(2u32),
+                    "120" => Some(1u32),
+                    _ => None,
+                },
+            LogicRate720 =>
+                match refresh_slice {
+                    "24" => Some(30u32),
+                    "30" => Some(24u32),
+                    "48" => Some(15u32),
+                    "51.4" => Some(14u32),
+                    "60" => Some(12u32),
+                    "72" => Some(10u32),
+                    "80" => Some(9u32),
+                    "90" => Some(8u32),
+                    "102.9" => Some(7u32),
+                    "120" => Some(6u32),
+                    "144" => Some(5u32),
+                    "180" => Some(4u32),
+                    "240" => Some(3u32),
+                    _ => None,
+                }
+        }
+    }
+    else { None }
+}
+
 
 struct StaticSystemInfo
 {
