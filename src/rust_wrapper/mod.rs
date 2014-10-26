@@ -114,10 +114,16 @@ pub enum LogLevel
     LogError = RETRO_LOG_ERROR as int
 }
 
+/// Safely wrapping printf is complicated, so for now only support printing
+/// &strs with utf removed.
 pub fn retro_log(level: LogLevel, text: &str)
 {
+    unsafe {
+        let c_text = malloc_ascii_cstring(text);
+        retro_log_cb.unwrap()(level as i32, "%s\n\0".as_ptr() as *const c_char, c_text);
+        free(c_text as *mut c_void);
+    }
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
