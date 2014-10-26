@@ -50,7 +50,17 @@ static VALID_EXTENSIONS: &'static str  = "";
 
 // Core screen size in pixels.
 // Frontends provide various options for upscaling if this is lower than the
-// display resolution.
+// display resolution. Note that moving objects a non-integer number of pixels
+// per frame will result in poor motion quality, and because rust-libretro
+// supports adjustable frame rates there is no way to guarantee integer pixel
+// movement per frame. To reduce this problem, rust-libretro generates core
+// options to increase the internal resolution. The framebuffer will be
+// automatically resized, and if you use the built in blitting functions scaling
+// will be handled automatically. If you write your own blitting code or similar
+// you must take into account the INTERNAL_SCALE_X and INTERNAL_SCALE_Y static
+// mut variables. Pixel art purists or those with low performance hardware may
+// leave the scale at 1x, and the X and Y axis may be scaled independently so
+// scanline shader or CRT users can use horizontal scaling only.
 const AV_SCREEN_WIDTH: u32 = 320;
 const AV_SCREEN_HEIGHT: u32 = 240;
 
@@ -81,8 +91,8 @@ const AV_PIXEL_ASPECT: f32 = 1.0;
 // for example complicated physics simulation, you may need a lower core logic
 // rate.
 //
-// Note that attempting to simulate transparency with flicker will not work
-// correctly, as some frame rates will result in low frequency flashing that
+// Attempting to simulate transparency with flicker will not work correctly, as
+// some frame rates will result in low frequency flashing that will look ugly and
 // could pose a risk to photosensitive epiletics. Use alpha blending, or if you
 // need only one layer of transparency, dithering may also be acceptable.
 //

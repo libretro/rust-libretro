@@ -70,6 +70,7 @@ static HIGH_FRAME_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|144|180|240|24|30|48|51.4|72|80|90|102.9|\0";
 
 static mut retro_environment_cb: Option<retro_environment_t> = None;
+static mut retro_log_cb: Option<retro_log_printf_t> = None;
 #[no_mangle]
 pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
 {
@@ -98,7 +99,25 @@ pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
         
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_VARIABLES,
                                   retro_variables.as_mut_ptr() as *mut c_void);
+
+    let log_interface = retro_log_callback { log: transmute(0u) };
+    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_LOG_INTERFACE,
+                                  transmute(&log_interface));
+    retro_log_cb = Some(log_interface.log);
 }
+
+pub enum LogLevel
+{
+    LogDebug = RETRO_LOG_DEBUG as int,
+    LogInfo = RETRO_LOG_INFO as int,
+    LogWarn = RETRO_LOG_WARN as int,
+    LogError = RETRO_LOG_ERROR as int
+}
+
+pub fn retro_log(level: LogLevel, text: &str)
+{
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
@@ -198,16 +217,16 @@ fn get_frame_mult() -> Option<u32>
 
 struct StaticSystemInfo
 {
-    name: *mut c_char,
-    version: *mut c_char,
-    extensions: *mut c_char,
+    name: *const c_char,
+    version: *const c_char,
+    extensions: *const c_char,
 }
 
 static mut static_system_info: StaticSystemInfo = StaticSystemInfo
 {
-    name: 0u8 as *mut c_char,
-    version: 0u8 as *mut c_char,
-    extensions: 0u8 as *mut c_char,
+    name: 0u8 as *const c_char,
+    version: 0u8 as *const c_char,
+    extensions: 0u8 as *const c_char,
 };
 
 #[no_mangle]
@@ -215,23 +234,23 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 {
     use super::{CORE_NAME, CORE_VERSION, VALID_EXTENSIONS};
 
-    malloc_ascii_cstring(&mut static_system_info.name, CORE_NAME);
-    malloc_ascii_cstring(&mut static_system_info.version, CORE_VERSION);
-    malloc_ascii_cstring(&mut static_system_info.extensions, VALID_EXTENSIONS);
-
-    (*info).library_name     = static_system_info.name as *const c_char;
-    (*info).library_version  = static_system_info.version as *const c_char;
-    (*info).valid_extensions = static_system_info.extensions as *const c_char;
+    static_system_info.name = malloc_ascii_cstring(CORE_NAME);
+    static_system_info.version = malloc_ascii_cstring(CORE_VERSION);
+    static_system_info.extensions = malloc_ascii_cstring(VALID_EXTENSIONS);
+    
+    (*info).library_name     = static_system_info.name;
+    (*info).library_version  = static_system_info.version;
+    (*info).valid_extensions = static_system_info.extensions;
     (*info).need_fullpath    = false as u8;
     (*info).block_extract    = false as u8;
 }
 
-unsafe fn malloc_ascii_cstring(dst: &mut *mut c_char, src: &'static str)
+unsafe fn malloc_ascii_cstring(src: &str) -> *const c_char
 {
-    if *dst != 0u8 as *mut c_char { return; }
     let terminated_max_len = (src.as_bytes().len() + 1) as size_t;
-    *dst = malloc(terminated_max_len) as *mut c_char;
-    strip_utf_strlcpy(*dst, src.as_bytes(), terminated_max_len);
+    let dst: *mut c_char = malloc(terminated_max_len) as *mut c_char;
+    strip_utf_strlcpy(dst, src.as_bytes(), terminated_max_len);
+    dst as *const c_char
 }
 
 unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
@@ -272,11 +291,11 @@ pub unsafe extern "C" fn retro_init()
 pub unsafe extern "C" fn retro_deinit()
 {
     free(frame_buf);
-    if static_system_info.name != 0u8 as *mut c_char
+    if static_system_info.name != 0u8 as *const c_char
         { free(static_system_info.name as *mut c_void); }
-    if static_system_info.version != 0u8 as *mut c_char
+    if static_system_info.version != 0u8 as *const c_char
         { free(static_system_info.version as *mut c_void); }
-    if static_system_info.extensions != 0u8 as *mut c_char
+    if static_system_info.extensions != 0u8 as *const c_char
         { free(static_system_info.extensions as *mut c_void); }
 }
 
