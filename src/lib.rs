@@ -78,8 +78,13 @@ const AV_PIXEL_ASPECT: f32 = 1.0;
 // as it is an integer multiple of all common refresh rates, or close enough
 // that the frontend can slightly adjust the core speed and resample the audio
 // for an exact match. If your core has particularly intensive CPU requirements,
-// for example complicated physics simulation, you may require a lower core
-// logic rate.
+// for example complicated physics simulation, you may need a lower core logic
+// rate.
+//
+// Note that attempting to simulate transparency with flicker will not work
+// correctly, as some frame rates will result in low frequency flashing that
+// could pose a risk to photosensitive epiletics. Use alpha blending, or if you
+// need only one layer of transparency, dithering may also be acceptable.
 //
 // Future versions of libretro will include support for automatic configuration
 // of the frame rate, support for tuning of the video latency to trade off
