@@ -71,7 +71,7 @@ const AV_PIXEL_ASPECT: f32 = 1.0;
 // Libretro is designed around fixed frame rate cores. For maximum compatibility
 // with various display refresh rates, rust-libretro uses threaded rendering,
 // where a snapshot of video related state is saved after a fixed number of core
-// logic updates and used to render a video frame asychronously.
+// logic updates and used to render a video frame chronously.
 //
 // Core logic rate is one of three supported values:
 // LogicRate60 (60Hz)
@@ -116,7 +116,10 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 // higher image quality.
 const COLOR_DEPTH_32: bool = false;
 
-
+// You must implement several functions that will be automatically called by
+// rust-libretro. These functions must not be called by your own code, so they
+// are wrapped in macros that mark them unsafe while maintaining a safe inner
+// function.
 
 
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
@@ -160,10 +163,12 @@ pub extern fn retro_run()
     
     unsafe {retro_input_poll_cb.unwrap()();}
 
-    let input = InputState::poll(0);
+   
    
     let mut audio_buffer: [u16, ..800] = [0u16, ..800];
-    
+
+    let playernum = 0;
+    let input = InputState::poll(playernum);
     if input[PadA].pressed { 
         render_audio(&mut audio_buffer, 10000.0, &mut g.phase);
     }

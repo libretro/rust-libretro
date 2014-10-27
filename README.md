@@ -1,11 +1,9 @@
-hellorust-libretro
-==================
+rust-libretro
+=============
 
-Test libretro-core in Rust
+WIP libretro wrapper for Rust.
 
-Pre-alpha WIP, do not use this as a reference for good code.
-
-License: GPL3+, with the exception of src/libretro.rs which is MIT
+License: MIT
 
 Thread Safety Requirements
 ==========================
@@ -15,3 +13,6 @@ any such library from outside its specified environment then you must ensure
 thread safety. All calls to the library, with the exception of a call to
 retro_audio_callback, must be made from the same thread. Failure to follow this
 restriction may result in undefined behavior.
+
+This restriction may be lifted in future versions if I can figure out how to
+do it without significantly harming performance.
