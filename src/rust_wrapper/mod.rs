@@ -399,7 +399,24 @@ impl InputState
     }
 }
 
+#[no_mangle]
+pub extern fn retro_run()
+{
+    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
+    // For now, poll input hardware only once per displayed frame
+    // (InputState::poll uses cached values)
+    // libretro version 2 will support polling every logic update
+    unsafe {retro_input_poll_cb.unwrap()();}
+    for _i in range(0, get_frame_mult().unwrap()) {
+        super::core_run();
+    }
 
+    // TODO threaded video
+    unsafe {
+       retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, (AV_SCREEN_WIDTH * 2) as size_t);
+    }
+ 
+}
 pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
 
 #[no_mangle]

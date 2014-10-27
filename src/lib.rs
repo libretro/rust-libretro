@@ -28,11 +28,8 @@
 
 extern crate libc;
 extern crate rlibc;
-extern crate rustrt;
 
 use std::mem::transmute;
-use libc::types::common::c95::c_void;
-use libc::types::os::arch::c95::size_t;
 use rust_wrapper::*;
 pub mod rust_wrapper;
 
@@ -123,9 +120,48 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 const COLOR_DEPTH_32: bool = false;
 
 // You must implement several functions that will be automatically called by
-// rust-libretro. These functions must not be called by your own code, so they
-// are wrapped in macros that mark them unsafe while maintaining a safe inner
-// function.
+// rust-libretro. First is core_run(). You must poll input here with
+// InputState::poll(playernum) and update the core state accordingly.
+pub fn core_run()
+{
+    // libretro v1 does not include user data pointers, so all state needs
+    // to be stored in static muts. So long as you never call core_run() yourself
+    // it is safe to convert them to owned data, because the libretro API
+    // requires this function to be called from a single thread.
+    let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
+
+    let playernum = 0;
+    // InputState::poll returns a struct than can be indexed with the
+    // ControllerButton enum.
+    let input = InputState::poll(playernum);
+   
+    g.frame = g.frame + 1;
+    
+    if (input[PadUp].pressed) && (g.y > 0)
+    {
+        g.y = g.y - 1;
+    }
+    
+    if (input[PadDown].pressed) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
+    {
+        g.y = g.y + 1;
+    }
+    
+    if (input[PadLeft].pressed) && (g.x > 0)
+    {
+        g.x = g.x - 1;
+    }
+    
+    if (input[PadRight].pressed) && ((g.x) < (AV_SCREEN_WIDTH - 1))
+    {
+       g.x = g.x + 1;
+    }
+    
+    image_loader();
+    write_pixel(g.x, g.y);
+
+    
+}
 
 
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
@@ -159,65 +195,6 @@ GState
 unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
 {
       transmute(std::raw::Slice {data: base as *const T, len: length})
-}
-
-#[no_mangle]
-pub extern fn retro_run()
-{
-    
-    let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
-    
-    unsafe {retro_input_poll_cb.unwrap()();}
-
-   
-   
-    let mut audio_buffer: [u16, ..800] = [0u16, ..800];
-
-    let playernum = 0;
-    let input = InputState::poll(playernum);
-    if input[PadA].pressed { 
-        render_audio(&mut audio_buffer, 10000.0, &mut g.phase);
-    }
-    
-    g.frame = g.frame + 1;
-    
-    if (input[PadUp].pressed) && (g.y > 0)
-    {
-        g.y = g.y - 1;
-    }
-    
-    if (input[PadDown].pressed) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
-    {
-        g.y = g.y + 1;
-    }
-    
-    if (input[PadLeft].pressed) && (g.x > 0)
-    {
-        g.x = g.x - 1;
-    }
-    
-    if (input[PadRight].pressed) && ((g.x) < (AV_SCREEN_WIDTH - 1))
-    {
-       g.x = g.x + 1;
-    }
-    
-    image_loader();
-    write_pixel(g.x, g.y);
-
-    unsafe {
-       retro_audio_sample_batch_cb.unwrap()(transmute(&audio_buffer), 400);
-       retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, (AV_SCREEN_WIDTH * 2) as size_t);
-    }
-    
-}
-
-fn render_audio(buffer: &mut[u16, ..800], vol: f32, phase: &mut f32)
-{
-   for mut i in buffer.iter_mut()
-   {
-         *phase = *phase + 0.001;
-         *i = ((*phase - (*phase).floor()) * vol) as u16;
-   }
 }
 
 fn write_pixel(x: u32, y: u32)
