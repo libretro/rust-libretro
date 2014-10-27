@@ -230,14 +230,14 @@ fn get_frame_mult() -> Option<u32>
     static mut cached_frame_mult: Option<u32> = Some(1);
     static mut first_time: bool = true;
 
-    let get_variable =
-        retro_variable {key: 0u as *const c_char,
-                        value: 0u as *const c_char};
+    let change: u8 = 0;
     unsafe
     {
-        if first_time || retro_environment_cb.unwrap()(
+        retro_environment_cb.unwrap()(
             RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE,
-            transmute(&get_variable)) == 0
+            transmute(&change));
+     
+        if first_time || change != 0
         {
             first_time = false;
             cached_frame_mult = get_environment_frame_mult();
