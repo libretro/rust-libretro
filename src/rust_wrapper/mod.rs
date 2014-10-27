@@ -9,9 +9,10 @@ use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
 use std::mem::uninitialized;
-use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
+//use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 use rustrt::thread::Thread;
 use std::sync::atomics::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -460,6 +461,9 @@ impl InputState
 pub extern fn retro_run()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
+
+    unsafe {VIDEO_LOCK.lock_noguard();}
+    
     // For now, poll input hardware only once per displayed frame
     // (InputState::poll uses cached values)
     // libretro version 2 will support polling every logic update
@@ -469,25 +473,19 @@ pub extern fn retro_run()
 
             // TODO set the video latency
             // Currently set to maximum possible
+
             super::snapshot_video();
-            
-            // If the video thread isn't waiting then spin until it is
-            while !VIDEO_THREAD_READY.load(SeqCst){}
-            VIDEO_THREAD_GO.store(true, SeqCst);          
-            
-        }
-                    
-        super::core_run();
+            unsafe {VIDEO_LOCK.unlock_noguard();}
+            unsafe {
+                let guard = VIDEO_WAIT.lock();
+                guard.signal();
+            }
+       }
+       super::core_run();
     }
 
-    MAIN_THREAD_READY.store(true, SeqCst);            
-    while !MAIN_THREAD_GO.load(SeqCst){}
-    MAIN_THREAD_GO.store(false, SeqCst);
-    MAIN_THREAD_READY.store(false, SeqCst);
-            
 
-    
-    // TODO threaded video
+    unsafe {VIDEO_LOCK.lock_noguard();}
     unsafe {
         retro_video_refresh_cb.unwrap()(frame_buf as *const c_void,
                                         AV_SCREEN_WIDTH,
@@ -495,6 +493,7 @@ pub extern fn retro_run()
                                         (AV_SCREEN_WIDTH *
                                          if COLOR_DEPTH_32 {4} else {2}) as size_t);
     }
+    unsafe {VIDEO_LOCK.unlock_noguard();}
  
 }
 pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
@@ -510,53 +509,41 @@ pub unsafe extern "C" fn retro_init()
 
     // start video thread
     Thread::spawn(video_thread);
-    // spin until the thread is spawned
-    while !VIDEO_THREAD_READY.load(SeqCst){}
 }
 
-static VIDEO_THREAD_READY: AtomicBool = INIT_ATOMIC_BOOL;
-static MAIN_THREAD_READY: AtomicBool = INIT_ATOMIC_BOOL;
-static VIDEO_THREAD_GO: AtomicBool = INIT_ATOMIC_BOOL;
-static MAIN_THREAD_GO: AtomicBool = INIT_ATOMIC_BOOL;
-static VIDEO_QUIT_START: AtomicBool = INIT_ATOMIC_BOOL;
-static VIDEO_QUIT_DONE: AtomicBool = INIT_ATOMIC_BOOL;
+static VIDEO_SHUTDOWN: AtomicBool = INIT_ATOMIC_BOOL;
+
+static VIDEO_LOCK: StaticNativeMutex = NATIVE_MUTEX_INIT;
+static VIDEO_WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
 
 fn video_thread()
 {
+    println!("Video thread starts");
     loop
     {
-        if !(VIDEO_QUIT_START.load(SeqCst))
-        {
-            VIDEO_THREAD_READY.store(true, SeqCst);            
-            while !VIDEO_THREAD_GO.load(SeqCst){}
-            VIDEO_THREAD_GO.store(false, SeqCst);
-            VIDEO_THREAD_READY.store(false, SeqCst);
-            
-            super::render_video();
-
-            while !MAIN_THREAD_READY.load(SeqCst)
-            {
-                if VIDEO_QUIT_START.load(SeqCst) { break; }
-            }
-            MAIN_THREAD_GO.store(true, SeqCst);
+        unsafe {
+            let guard = VIDEO_WAIT.lock();
+            guard.wait();
         }
-        if VIDEO_QUIT_START.load(SeqCst) { break; }
+        if VIDEO_SHUTDOWN.load(SeqCst) { break; }
+        unsafe {VIDEO_LOCK.lock_noguard();}
+        super::render_video();
+        unsafe {VIDEO_LOCK.unlock_noguard();}
     }
-    VIDEO_QUIT_DONE.store(true, SeqCst);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_deinit()
 {
-    // TODO find some faster way of stopping the video thread
-    let mut spinlock_quit = false;
-    while !spinlock_quit
+    VIDEO_SHUTDOWN.store(true, SeqCst);
     {
-        VIDEO_THREAD_GO.store(true, SeqCst);
-        VIDEO_QUIT_START.store(true, SeqCst);
-        spinlock_quit = VIDEO_QUIT_DONE.load(SeqCst);
+        let guard = VIDEO_WAIT.lock();
+        guard.signal();
     }
     
+    
+    VIDEO_LOCK.destroy();
+       
     if frame_buf != 0u8 as *mut c_void
         { free(frame_buf); }
     if static_system_info.name != 0u8 as *const c_char

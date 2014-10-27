@@ -230,7 +230,7 @@ struct GState
     frame: uint,
     x: u32,
     y: u32,
-    phase: f32
+    _phase: f32
 }
 
 static mut g_state: GState =
@@ -239,7 +239,7 @@ GState
    frame: 0,
    x: 0,
    y: 0,
-   phase: 0.0
+   _phase: 0.0
 };
 
 unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
