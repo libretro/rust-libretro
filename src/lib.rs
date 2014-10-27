@@ -135,30 +135,30 @@ pub fn core_run()
     // ControllerButton enum.
     let input = InputState::poll(playernum);
    
-    g.frame = g.frame + 1;
+    g.frame = g.frame + 16;
     
     if (input[PadUp].pressed) && (g.y > 0)
     {
-        g.y = g.y - 1;
+        g.y = g.y -16;
     }
     
-    if (input[PadDown].pressed) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
+    if (input[PadDown].pressed) && ((g.y) < ((AV_SCREEN_HEIGHT * 256) - 256))
     {
-        g.y = g.y + 1;
+        g.y = g.y + 16;
     }
     
     if (input[PadLeft].pressed) && (g.x > 0)
     {
-        g.x = g.x - 1;
+        g.x = g.x - 16;
     }
     
-    if (input[PadRight].pressed) && ((g.x) < (AV_SCREEN_WIDTH - 1))
+    if (input[PadRight].pressed) && ((g.x) < ((AV_SCREEN_WIDTH * 256)- 256))
     {
-       g.x = g.x + 1;
+       g.x = g.x + 16;
     }
     
     image_loader();
-    write_pixel(g.x, g.y);
+    write_pixel(g.x / 256, g.y /256);
 
     
 }

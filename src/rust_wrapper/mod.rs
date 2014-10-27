@@ -67,7 +67,7 @@ static LOW_FRAME_RATE_VALUES: &'static str =
 static MEDIUM_FRAME_RATE_VALUES: &'static str =
     "Display Refresh Rate; 60|120|30\0";
 static HIGH_FRAME_RATE_VALUES: &'static str =
-    "Display Refresh Rate; 60|120|144|180|240|24|30|48|51.4|72|80|90|102.9|\0";
+    "Display Refresh Rate; 60|72|80|90|102.9|120|144|180|240|24|30|48|51.4|\0";
 
 static mut retro_environment_cb: Option<retro_environment_t> = None;
 static mut retro_log_cb: Option<retro_log_printf_t> = None;
