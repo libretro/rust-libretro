@@ -9,6 +9,10 @@ use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
 use std::mem::uninitialized;
+//use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
+use rustrt::thread::Thread;
+use std::sync::atomics::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -457,21 +461,31 @@ impl InputState
 pub extern fn retro_run()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
+
+    unsafe {VIDEO_LOCK.lock_noguard();}
+    
     // For now, poll input hardware only once per displayed frame
     // (InputState::poll uses cached values)
     // libretro version 2 will support polling every logic update
     unsafe {retro_input_poll_cb.unwrap()();}
-    for _i in range(0, get_frame_mult().unwrap()) {
-        super::core_run();
+    for i in range(0, get_frame_mult().unwrap()) {
+        if i==0 {
+
+            // TODO set the video latency
+            // Currently set to maximum possible
+
+            super::snapshot_video();
+            unsafe {VIDEO_LOCK.unlock_noguard();}
+            unsafe {
+                let guard = VIDEO_WAIT.lock();
+                guard.signal();
+            }
+       }
+       super::core_run();
     }
 
-    // TODO set the video latency
-    // Currently set to minimum possible, negates all benefit of threading
-    super::snapshot_video();
 
-    super::render_video();
-    
-    // TODO threaded video
+    unsafe {VIDEO_LOCK.lock_noguard();}
     unsafe {
         retro_video_refresh_cb.unwrap()(frame_buf as *const c_void,
                                         AV_SCREEN_WIDTH,
@@ -479,6 +493,7 @@ pub extern fn retro_run()
                                         (AV_SCREEN_WIDTH *
                                          if COLOR_DEPTH_32 {4} else {2}) as size_t);
     }
+    unsafe {VIDEO_LOCK.unlock_noguard();}
  
 }
 pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
@@ -491,13 +506,46 @@ pub unsafe extern "C" fn retro_init()
                         (AV_SCREEN_HEIGHT as uint)) as u64 *
                        if COLOR_DEPTH_32 {size_of::<u32>()}
                        else {size_of::<u16>()} as u64);
+
+    // start video thread
+    Thread::spawn(video_thread);
 }
 
+static VIDEO_SHUTDOWN: AtomicBool = INIT_ATOMIC_BOOL;
+
+static VIDEO_LOCK: StaticNativeMutex = NATIVE_MUTEX_INIT;
+static VIDEO_WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
+
+fn video_thread()
+{
+    println!("Video thread starts");
+    loop
+    {
+        unsafe {
+            let guard = VIDEO_WAIT.lock();
+            guard.wait();
+        }
+        if VIDEO_SHUTDOWN.load(SeqCst) { break; }
+        unsafe {VIDEO_LOCK.lock_noguard();}
+        super::render_video();
+        unsafe {VIDEO_LOCK.unlock_noguard();}
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_deinit()
 {
-    free(frame_buf);
+    VIDEO_SHUTDOWN.store(true, SeqCst);
+    {
+        let guard = VIDEO_WAIT.lock();
+        guard.signal();
+    }
+    
+    
+    VIDEO_LOCK.destroy();
+       
+    if frame_buf != 0u8 as *mut c_void
+        { free(frame_buf); }
     if static_system_info.name != 0u8 as *const c_char
         { free(static_system_info.name as *mut c_void); }
     if static_system_info.version != 0u8 as *const c_char
