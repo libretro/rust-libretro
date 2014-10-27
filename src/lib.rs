@@ -120,8 +120,12 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 const COLOR_DEPTH_32: bool = false;
 
 // You must implement several functions that will be automatically called by
-// rust-libretro. First is core_run(). You must poll input here with
-// InputState::poll(playernum) and update the core state accordingly.
+// rust-libretro. First is core_run(). You can poll input here with
+// InputState::poll(playernum) and update the core state accordingly. All state
+// change must be deterministic across all platforms, so be careful with
+// threading and floating point math. See
+// http://randomascii.wordpress.com/2013/07/16/floating-point-determinism/
+// for advise on using floats.
 pub fn core_run()
 {
     // libretro v1 does not include user data pointers, so all state needs
@@ -130,38 +134,50 @@ pub fn core_run()
     // requires this function to be called from a single thread.
     let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
 
+    g.frame = g.frame + 1;
+        
     let playernum = 0;
     // InputState::poll returns a struct than can be indexed with the
     // ControllerButton enum.
     let input = InputState::poll(playernum);
    
-    g.frame = g.frame + 1;
     
-    if (input[PadUp].pressed) && (g.y > 0)
-    {
+    if (input[PadUp].pressed) && (g.y > 0) {
         g.y = g.y -16;
     }
     
-    if (input[PadDown].pressed) && ((g.y) < ((AV_SCREEN_HEIGHT * 256) - 256))
-    {
+    if (input[PadDown].pressed) && ((g.y) < ((AV_SCREEN_HEIGHT * 256) - 256)) {
         g.y = g.y + 16;
     }
     
-    if (input[PadLeft].pressed) && (g.x > 0)
-    {
+    if (input[PadLeft].pressed) && (g.x > 0) {
         g.x = g.x - 16;
     }
     
-    if (input[PadRight].pressed) && ((g.x) < ((AV_SCREEN_WIDTH * 256)- 256))
-    {
+    if (input[PadRight].pressed) && ((g.x) < ((AV_SCREEN_WIDTH * 256)- 256)) {
        g.x = g.x + 16;
     }
     
     image_loader();
     write_pixel(g.x / 256, g.y /256);
-
-    
 }
+
+// This function is periodically called after core_run(). It must save a snapshot
+// of all state necessary for rendering video. Depending on the size and
+// complexity of the state it may be faster to simply copy all the core state,
+// for example using memcpy.
+pub fn snapshot_video()
+{
+}
+
+// This function renders one frame video in a separate thread. It may only access
+// the state saved in snapshot_video(). It must take into account
+// INTERNAL_SCALE_X and INTERNAL_SCALE_Y and write to frame_buf. In you use the
+// included blitting function this is handled for you.
+pub fn render_video()
+{
+}
+
 
 
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");

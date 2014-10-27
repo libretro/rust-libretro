@@ -253,7 +253,7 @@ fn get_frame_mult() -> Option<u32>
 
         if change != 0
         {
-            let info: retro_system_av_info = uninitialized(); // TODO reset AV info
+            let info: retro_system_av_info = uninitialized();
             set_retro_system_av_info(transmute(&info), CORE_LOGIC_RATE as u32 as f64 /
                                cached_frame_mult.unwrap() as f64);
             retro_environment_cb.unwrap()(
