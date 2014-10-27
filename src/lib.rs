@@ -28,6 +28,7 @@
 
 extern crate libc;
 extern crate rlibc;
+extern crate rustrt;
 
 use std::mem::transmute;
 use rust_wrapper::*;

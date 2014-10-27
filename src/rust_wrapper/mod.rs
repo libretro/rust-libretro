@@ -9,6 +9,9 @@ use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
 use std::mem::uninitialized;
+use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
+use rustrt::thread::Thread;
+use std::sync::atomics::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -461,15 +464,28 @@ pub extern fn retro_run()
     // (InputState::poll uses cached values)
     // libretro version 2 will support polling every logic update
     unsafe {retro_input_poll_cb.unwrap()();}
-    for _i in range(0, get_frame_mult().unwrap()) {
+    for i in range(0, get_frame_mult().unwrap()) {
+        if i==0 {
+
+            // TODO set the video latency
+            // Currently set to minimum possible, negates all benefit of threading
+            super::snapshot_video();
+            
+            // If the video thread isn't waiting then spin until it is
+            while !VIDEO_THREAD_READY.load(SeqCst){}
+            VIDEO_THREAD_GO.store(true, SeqCst);          
+            
+        }
+                    
         super::core_run();
     }
 
-    // TODO set the video latency
-    // Currently set to minimum possible, negates all benefit of threading
-    super::snapshot_video();
+    MAIN_THREAD_READY.store(true, SeqCst);            
+    while !MAIN_THREAD_GO.load(SeqCst){}
+    MAIN_THREAD_GO.store(false, SeqCst);
+    MAIN_THREAD_READY.store(false, SeqCst);
+            
 
-    super::render_video();
     
     // TODO threaded video
     unsafe {
@@ -491,13 +507,58 @@ pub unsafe extern "C" fn retro_init()
                         (AV_SCREEN_HEIGHT as uint)) as u64 *
                        if COLOR_DEPTH_32 {size_of::<u32>()}
                        else {size_of::<u16>()} as u64);
+
+    // start video thread
+    Thread::spawn(video_thread);
+    // spin until the thread is spawned
+    while !VIDEO_THREAD_READY.load(SeqCst){}
 }
 
+static VIDEO_THREAD_READY: AtomicBool = INIT_ATOMIC_BOOL;
+static MAIN_THREAD_READY: AtomicBool = INIT_ATOMIC_BOOL;
+static VIDEO_THREAD_GO: AtomicBool = INIT_ATOMIC_BOOL;
+static MAIN_THREAD_GO: AtomicBool = INIT_ATOMIC_BOOL;
+static VIDEO_QUIT_START: AtomicBool = INIT_ATOMIC_BOOL;
+static VIDEO_QUIT_DONE: AtomicBool = INIT_ATOMIC_BOOL;
+
+fn video_thread()
+{
+    loop
+    {
+        if !(VIDEO_QUIT_START.load(SeqCst))
+        {
+            VIDEO_THREAD_READY.store(true, SeqCst);            
+            while !VIDEO_THREAD_GO.load(SeqCst){}
+            VIDEO_THREAD_GO.store(false, SeqCst);
+            VIDEO_THREAD_READY.store(false, SeqCst);
+            
+            super::render_video();
+
+            while !MAIN_THREAD_READY.load(SeqCst)
+            {
+                if VIDEO_QUIT_START.load(SeqCst) { break; }
+            }
+            MAIN_THREAD_GO.store(true, SeqCst);
+        }
+        if VIDEO_QUIT_START.load(SeqCst) { break; }
+    }
+    VIDEO_QUIT_DONE.store(true, SeqCst);
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_deinit()
 {
-    free(frame_buf);
+    // TODO find some faster way of stopping the video thread
+    let mut spinlock_quit = false;
+    while !spinlock_quit
+    {
+        VIDEO_THREAD_GO.store(true, SeqCst);
+        VIDEO_QUIT_START.store(true, SeqCst);
+        spinlock_quit = VIDEO_QUIT_DONE.load(SeqCst);
+    }
+    
+    if frame_buf != 0u8 as *mut c_void
+        { free(frame_buf); }
     if static_system_info.name != 0u8 as *const c_char
         { free(static_system_info.name as *mut c_void); }
     if static_system_info.version != 0u8 as *const c_char
