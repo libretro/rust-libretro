@@ -468,7 +468,7 @@ pub extern fn retro_run()
         if i==0 {
 
             // TODO set the video latency
-            // Currently set to minimum possible, negates all benefit of threading
+            // Currently set to maximum possible
             super::snapshot_video();
             
             // If the video thread isn't waiting then spin until it is
