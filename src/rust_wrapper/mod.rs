@@ -169,11 +169,10 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
 }
 
-fn get_frame_mult() -> Option<u32>
+fn get_environment_frame_mult() -> Option<u32>
 {
     use super::CORE_LOGIC_RATE;
-
-    let get_variable =
+        let get_variable =
         retro_variable {key: FRAME_RATE_KEY.as_ptr() as *const i8,
                         value: 0u as *const c_char};
     
@@ -183,7 +182,7 @@ fn get_frame_mult() -> Option<u32>
     // TODO convert to &str directly without heap allocation
     let refresh_rate =
         unsafe { CString::new(transmute(get_variable.value), false) };
-       
+
     if refresh_rate.as_str().is_some()
     {
         let refresh_slice: &str = refresh_rate.as_str().unwrap();
@@ -220,7 +219,35 @@ fn get_frame_mult() -> Option<u32>
                 }
         }
     }
-    else { None }
+    else
+    {
+        None
+    }
+}
+
+fn get_frame_mult() -> Option<u32>
+{
+    static mut cached_frame_mult: Option<u32> = Some(1);
+    static mut first_time: bool = true;
+
+    let get_variable =
+        retro_variable {key: 0u as *const c_char,
+                        value: 0u as *const c_char};
+    unsafe
+    {
+        if first_time || retro_environment_cb.unwrap()(
+            RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE,
+            transmute(&get_variable)) == 0
+        {
+            first_time = false;
+            cached_frame_mult = get_environment_frame_mult();
+            return cached_frame_mult;
+        }
+        else
+        {
+            return cached_frame_mult;
+        }
+    }
 }
 
 
