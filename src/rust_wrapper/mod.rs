@@ -188,7 +188,7 @@ fn get_frame_mult() -> Option<u32>
     static mut cached_frame_mult: Option<u32> = Some(1);
     static mut first_time: bool = true;
 
-    let change: u8 = 0;
+    let mut change: u8 = 0;
     unsafe
     {
         retro_environment_cb.unwrap()(
@@ -198,7 +198,13 @@ fn get_frame_mult() -> Option<u32>
         if first_time || change != 0
         {
             first_time = false;
-            cached_frame_mult = get_environment_frame_mult();
+            let new_frame_mult = get_environment_frame_mult();
+            if new_frame_mult == cached_frame_mult {
+                change = 0;
+            }
+            else {
+                cached_frame_mult = new_frame_mult;
+            }
         }
 
         if change != 0
