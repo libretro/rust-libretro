@@ -8,6 +8,8 @@ use libc::malloc;
 use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
+use std::sync::atomics::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -285,8 +287,48 @@ unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
     *dst.offset(dst_offset) = 0i8;
 }
 
-pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
+pub enum ControllerButton
+{
+    JoypadB = RETRO_DEVICE_ID_JOYPAD_B as int,
+    JoypadY = RETRO_DEVICE_ID_JOYPAD_Y as int,
+    JoypadSelect = RETRO_DEVICE_ID_JOYPAD_SELECT as int,
+    JoypadStart = RETRO_DEVICE_ID_JOYPAD_START as int,
+    JoypadUp = RETRO_DEVICE_ID_JOYPAD_UP as int,
+    JoypadDown = RETRO_DEVICE_ID_JOYPAD_DOWN as int,
+    JoypadLeft = RETRO_DEVICE_ID_JOYPAD_LEFT as int,
+    JoypadRight = RETRO_DEVICE_ID_JOYPAD_RIGHT as int,
+    JoypadA = RETRO_DEVICE_ID_JOYPAD_A as int,
+    JoypadX = RETRO_DEVICE_ID_JOYPAD_X as int,
+    JoypadL = RETRO_DEVICE_ID_JOYPAD_L as int,
+    JoypadR = RETRO_DEVICE_ID_JOYPAD_R as int,
+    JoypadL2 = RETRO_DEVICE_ID_JOYPAD_L2 as int,
+    JoypadR2 = RETRO_DEVICE_ID_JOYPAD_R2 as int,
+    JoypadL3 = RETRO_DEVICE_ID_JOYPAD_L3 as int,
+    JoypadR3 = RETRO_DEVICE_ID_JOYPAD_R3 as int,
+}
 
+static mut NUM_CONTROLLERS: u8 = 0;
+
+pub fn set_num_controllers(num: u8)
+{
+    static DONE_INIT: AtomicBool = INIT_ATOMIC_BOOL;
+    if DONE_INIT.compare_and_swap(false, true, SeqCst)
+    {
+        fail!("Attempted to initialize controllers twice"); 
+    };
+    
+    retro_log(LogDebug, "Once");
+}
+    
+
+
+pub fn register_button(button: ControllerButton)
+{
+}
+
+
+
+pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_init()
