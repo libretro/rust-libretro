@@ -150,6 +150,8 @@ fn set_retro_system_av_info(info: &mut retro_system_av_info, fps: f64)
 
 
 #[no_mangle]
+// Silence false warning, because Rust fails to track variable through transmute
+#[allow(unused_assignments)]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
     use super::{COLOR_DEPTH_32, CORE_LOGIC_RATE};
@@ -174,6 +176,43 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
         transmute(&RETRO_PIXEL_FORMAT_RGB565)
     };
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
+}
+
+
+/// Gets the current frame multiplier.
+/// Caches the current value and only runs the more expensive
+/// get_environment_frame_mult() if a core option has changed.
+fn get_frame_mult() -> Option<u32>
+{
+    use super::{CORE_LOGIC_RATE};
+    static mut cached_frame_mult: Option<u32> = Some(1);
+    static mut first_time: bool = true;
+
+    let change: u8 = 0;
+    unsafe
+    {
+        retro_environment_cb.unwrap()(
+            RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE,
+            transmute(&change));
+     
+        if first_time || change != 0
+        {
+            first_time = false;
+            cached_frame_mult = get_environment_frame_mult();
+        }
+
+        if change != 0
+        {
+            let info: retro_system_av_info = uninitialized();
+            set_retro_system_av_info(transmute(&info), CORE_LOGIC_RATE as u32 as f64 /
+                               cached_frame_mult.unwrap() as f64);
+            retro_environment_cb.unwrap()(
+                RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO,
+                transmute(&info));
+        }
+
+        return cached_frame_mult;
+    }
 }
 
 fn get_environment_frame_mult() -> Option<u32>
@@ -229,39 +268,6 @@ fn get_environment_frame_mult() -> Option<u32>
     else
     {
         None
-    }
-}
-
-fn get_frame_mult() -> Option<u32>
-{
-    use super::{CORE_LOGIC_RATE};
-    static mut cached_frame_mult: Option<u32> = Some(1);
-    static mut first_time: bool = true;
-
-    let change: u8 = 0;
-    unsafe
-    {
-        retro_environment_cb.unwrap()(
-            RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE,
-            transmute(&change));
-     
-        if first_time || change != 0
-        {
-            first_time = false;
-            cached_frame_mult = get_environment_frame_mult();
-        }
-
-        if change != 0
-        {
-            let info: retro_system_av_info = uninitialized();
-            set_retro_system_av_info(transmute(&info), CORE_LOGIC_RATE as u32 as f64 /
-                               cached_frame_mult.unwrap() as f64);
-            retro_environment_cb.unwrap()(
-                RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO,
-                transmute(&info));
-        }
-
-        return cached_frame_mult;
     }
 }
 
@@ -453,9 +459,19 @@ pub extern fn retro_run()
         super::core_run();
     }
 
+    // TODO set the video latency
+    // Currently set to minimum possible, negates all benefit of threading
+    super::snapshot_video();
+
+    super::render_video();
+    
     // TODO threaded video
     unsafe {
-       retro_video_refresh_cb.unwrap()(frame_buf as *const c_void, AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, (AV_SCREEN_WIDTH * 2) as size_t);
+        retro_video_refresh_cb.unwrap()(frame_buf as *const c_void,
+                                        AV_SCREEN_WIDTH,
+                                        AV_SCREEN_HEIGHT,
+                                        (AV_SCREEN_WIDTH *
+                                         if COLOR_DEPTH_32 {4} else {2}) as size_t);
     }
  
 }

@@ -120,12 +120,13 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 const COLOR_DEPTH_32: bool = false;
 
 // You must implement several functions that will be automatically called by
-// rust-libretro. First is core_run(). You can poll input here with
+// rust-libretro.
+// First is core_run(). You can poll input here with
 // InputState::poll(playernum) and update the core state accordingly. All state
 // change must be deterministic across all platforms, so be careful with
 // threading and floating point math. See
 // http://randomascii.wordpress.com/2013/07/16/floating-point-determinism/
-// for advise on using floats.
+// for advice on using floats.
 pub fn core_run()
 {
     // libretro v1 does not include user data pointers, so all state needs
@@ -143,23 +144,21 @@ pub fn core_run()
    
     
     if (input[PadUp].pressed) && (g.y > 0) {
-        g.y = g.y -16;
+        g.y = g.y - 32;
     }
     
     if (input[PadDown].pressed) && ((g.y) < ((AV_SCREEN_HEIGHT * 256) - 256)) {
-        g.y = g.y + 16;
+        g.y = g.y + 32;
     }
     
     if (input[PadLeft].pressed) && (g.x > 0) {
-        g.x = g.x - 16;
+        g.x = g.x - 32
     }
     
     if (input[PadRight].pressed) && ((g.x) < ((AV_SCREEN_WIDTH * 256)- 256)) {
-       g.x = g.x + 16;
+       g.x = g.x + 32;
     }
     
-    image_loader();
-    write_pixel(g.x / 256, g.y /256);
 }
 
 // This function is periodically called after core_run(). It must save a snapshot
@@ -168,17 +167,53 @@ pub fn core_run()
 // for example using memcpy.
 pub fn snapshot_video()
 {
+    let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
+    unsafe
+    {
+        snapshotx = g.x;
+        snapshoty = g.y;
+    }
 }
+
+static mut snapshotx: u32 = 0;
+static mut snapshoty: u32 = 0;
 
 // This function renders one frame video in a separate thread. It may only access
 // the state saved in snapshot_video(). It must take into account
-// INTERNAL_SCALE_X and INTERNAL_SCALE_Y and write to frame_buf. In you use the
-// included blitting function this is handled for you.
+// INTERNAL_SCALE_X, INTERNAL_SCALE_Y and write to frame_buf. If you use the
+// included blitting function this is handled for you. To gain the benefit of
+// internal scaling all screen object positions must be stored at sub-pixel
+// precision.
 pub fn render_video()
+{
+    image_loader();
+    unsafe {write_pixel(snapshotx / 256, snapshoty /256);}
+}
+
+// This function returns the size in bytes of the serialized core logic state
+// produced by serialize_core_state(). It must not change at runtime, so be
+// careful with heap allocation.
+pub fn get_serialize_size() -> uint
+{
+    0
+}
+
+// This function saves all core logic state to a known format in a memory buffer.
+// It must be possible to restore state with unserialize_core_state() on any
+// platform, so serialize to a fixed endianness and take care with pointers.
+// It may be simpler to avoid using pointers in the core state and use array
+// indices instead. Input state should not be serialized here as rust-libretro
+// serializes it automatically. Video state should not be serialized here as
+// it would conflict with proposed libretro 2.0 enhancements.
+pub fn serialize_core_state()
 {
 }
 
-
+// This function restores the core logic state serialized in
+// serialize_core_state().
+pub fn unserialize_core_state()
+{
+}
 
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 
@@ -188,8 +223,6 @@ fn image_loader()
    	rlibc::memcpy(transmute(frame_buf), transmute(&RAWIMAGE[0]), (AV_SCREEN_WIDTH * AV_SCREEN_HEIGHT * 2) as uint);
    }
 }
-
-
 
 struct GState
 {
