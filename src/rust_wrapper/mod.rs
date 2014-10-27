@@ -8,6 +8,7 @@ use libc::malloc;
 use libc::free;
 use std::c_str::CString;
 use std::mem::size_of;
+use std::mem::uninitialized;
 
 use rust_wrapper::libretro::*;
 pub mod libretro;
@@ -126,44 +127,50 @@ pub fn retro_log(level: LogLevel, text: &str)
     }
 }
 
+fn set_retro_system_av_info(info: &mut retro_system_av_info, fps: f64)
+{
+    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
+                AV_SAMPLE_RATE};
+
+    #[static_assert]
+    const _A1: bool = AV_SCREEN_HEIGHT > 0;
+    #[static_assert]
+    const _A2: bool = AV_SCREEN_WIDTH > 0;
+    #[static_assert]
+    const _A3: bool = AV_PIXEL_ASPECT > 0.0;
+
+    info.timing.fps = fps;
+    info.timing.sample_rate = AV_SAMPLE_RATE;
+    info.geometry.base_width   = AV_SCREEN_WIDTH;
+    info.geometry.base_height  = AV_SCREEN_HEIGHT;
+    info.geometry.max_width    = AV_SCREEN_WIDTH;
+    info.geometry.max_height   = AV_SCREEN_HEIGHT;
+    info.geometry.aspect_ratio = AV_PIXEL_ASPECT;
+}
+
+
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_info)
 {
-    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
-                AV_SAMPLE_RATE, COLOR_DEPTH_32, CORE_LOGIC_RATE};
-    #[static_assert]
-    static _A1: bool = AV_SCREEN_HEIGHT > 0;
-    #[static_assert]
-    static _A2: bool = AV_SCREEN_WIDTH > 0;
-    #[static_assert]
-    static _A3: bool = AV_PIXEL_ASPECT > 0.0;
+    use super::{COLOR_DEPTH_32, CORE_LOGIC_RATE};
 
     let frame_mult = get_frame_mult();
+    let mut fps = 60.0;
     
-    if frame_mult.is_some()
-    {
-        (*info).timing.fps = CORE_LOGIC_RATE as u32 as f64 /
+    if frame_mult.is_some() {
+        fps = CORE_LOGIC_RATE as u32 as f64 /
             frame_mult.unwrap() as f64;
     }
-    else
-    {
-        (*info).timing.fps = 60.0;
+    else {
         fail!("Core option error");
     }
- 
-    (*info).timing.sample_rate = AV_SAMPLE_RATE;
-    (*info).geometry.base_width   = AV_SCREEN_WIDTH;
-    (*info).geometry.base_height  = AV_SCREEN_HEIGHT;
-    (*info).geometry.max_width    = AV_SCREEN_WIDTH;
-    (*info).geometry.max_height   = AV_SCREEN_HEIGHT;
-    (*info).geometry.aspect_ratio = AV_PIXEL_ASPECT;
 
-    let pixel_format: *mut c_void = if COLOR_DEPTH_32
-    {
+    set_retro_system_av_info(transmute(info), fps);
+
+    let pixel_format: *mut c_void = if COLOR_DEPTH_32 {
         transmute(&RETRO_PIXEL_FORMAT_XRGB8888)
     }
-    else
-    {
+    else {
         transmute(&RETRO_PIXEL_FORMAT_RGB565)
     };
     retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, pixel_format);
@@ -227,6 +234,7 @@ fn get_environment_frame_mult() -> Option<u32>
 
 fn get_frame_mult() -> Option<u32>
 {
+    use super::{CORE_LOGIC_RATE};
     static mut cached_frame_mult: Option<u32> = Some(1);
     static mut first_time: bool = true;
 
@@ -241,12 +249,19 @@ fn get_frame_mult() -> Option<u32>
         {
             first_time = false;
             cached_frame_mult = get_environment_frame_mult();
-            return cached_frame_mult;
         }
-        else
+
+        if change != 0
         {
-            return cached_frame_mult;
+            let info: retro_system_av_info = uninitialized(); // TODO reset AV info
+            set_retro_system_av_info(transmute(&info), CORE_LOGIC_RATE as u32 as f64 /
+                               cached_frame_mult.unwrap() as f64);
+            retro_environment_cb.unwrap()(
+                RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO,
+                transmute(&info));
         }
+
+        return cached_frame_mult;
     }
 }
 

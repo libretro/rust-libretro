@@ -135,7 +135,7 @@ pub fn core_run()
     // ControllerButton enum.
     let input = InputState::poll(playernum);
    
-    g.frame = g.frame + 16;
+    g.frame = g.frame + 1;
     
     if (input[PadUp].pressed) && (g.y > 0)
     {
