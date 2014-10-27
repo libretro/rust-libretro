@@ -118,6 +118,7 @@ pub enum LogLevel
 /// &strs with utf removed.
 pub fn retro_log(level: LogLevel, text: &str)
 {
+    // TODO copy to the stack if text is short
     unsafe {
         let c_text = malloc_ascii_cstring(text);
         retro_log_cb.unwrap()(level as i32, "%s\n\0".as_ptr() as *const c_char, c_text);
@@ -178,6 +179,8 @@ fn get_frame_mult() -> Option<u32>
     
     unsafe { retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
                                            transmute(&get_variable)); }
+
+    // TODO convert to &str directly without heap allocation
     let refresh_rate =
         unsafe { CString::new(transmute(get_variable.value), false) };
        
@@ -288,8 +291,11 @@ pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
 #[no_mangle]
 pub unsafe extern "C" fn retro_init()
 {
-    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT};
-    frame_buf = malloc(((AV_SCREEN_WIDTH as uint) * (AV_SCREEN_HEIGHT as uint)) as u64 * size_of::<u16>() as u64);
+    use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
+    frame_buf = malloc(((AV_SCREEN_WIDTH as uint) *
+                        (AV_SCREEN_HEIGHT as uint)) as u64 *
+                       if COLOR_DEPTH_32 {size_of::<u32>()}
+                       else {size_of::<u16>()} as u64);
 }
 
 
