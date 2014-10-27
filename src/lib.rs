@@ -26,7 +26,6 @@ extern crate rustrt;
 
 use std::mem::transmute;
 use libc::types::common::c95::c_void;
-use libc::c_uint;
 use libc::types::os::arch::c95::size_t;
 use rust_wrapper::*;
 pub mod rust_wrapper;
@@ -65,7 +64,8 @@ const AV_SCREEN_WIDTH: u32 = 320;
 const AV_SCREEN_HEIGHT: u32 = 240;
 
 // Pixel aspect ratio.
-// This will usually be 1.0 for square pixels.
+// This will usually be 1.0 for square pixels. rust-libretro will automatically
+// adjust this as needed to compensate for internal scaling core options.
 const AV_PIXEL_ASPECT: f32 = 1.0;
 
 // Libretro is designed around fixed frame rate cores. For maximum compatibility
@@ -116,24 +116,6 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 // higher image quality.
 const COLOR_DEPTH_32: bool = false;
 
-// Register inputs. This function is called once on core initialization and
-// any further calls will be ignored. It configures input_poll() to return an
-// array of RETRO_DEVICE_JOYPAD input states, in order of controller number. Each
-// input state is an array of bools, in the order that register_button() was
-// called here. Frontends support binding other devices to RETRO_DEVICE_JOYPAD if
-// the user does not have a joypad.
-fn register_inputs()
-{
-    set_num_controllers(1); // Can be a maximum of 16
-    register_button(JoypadUp);
-    register_button(JoypadDown);
-    register_button(JoypadLeft);
-    register_button(JoypadRight);
-    register_button(JoypadA);
-    register_button(JoypadB);
-    register_button(JoypadStart);
-}
-
 
 
 
@@ -177,46 +159,33 @@ pub extern fn retro_run()
     let g = &mut unsafe {mem_as_mut_slice::<GState>(transmute(&g_state), 1)}[0];
     
     unsafe {retro_input_poll_cb.unwrap()();}
-    
-    const RETRO_DEVICE_JOYPAD:             libc::c_uint = 1;
-    const RETRO_DEVICE_ID_JOYPAD_UP:       libc::c_uint = 4;
-    const RETRO_DEVICE_ID_JOYPAD_DOWN:     libc::c_uint = 5;
-    const RETRO_DEVICE_ID_JOYPAD_LEFT:     libc::c_uint = 6;
-    const RETRO_DEVICE_ID_JOYPAD_RIGHT:    libc::c_uint = 7;
-    const RETRO_DEVICE_ID_JOYPAD_A:        libc::c_uint = 8;
-    const RETRO_DEVICE_ID_JOYPAD_B:        libc::c_uint = 0;
-    
-    let up = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)};
-    let right = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)};
-    let down = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)};
-    let left = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)};
-    let a = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A)};
-    let _b = unsafe {retro_input_state_cb.unwrap()(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)};
-    
+
+    let input = InputState::poll(0);
+   
     let mut audio_buffer: [u16, ..800] = [0u16, ..800];
     
-    if a == 1 { 
+    if input[PadA].pressed { 
         render_audio(&mut audio_buffer, 10000.0, &mut g.phase);
     }
     
     g.frame = g.frame + 1;
     
-    if (up == 1) && (g.y > 0)
+    if (input[PadUp].pressed) && (g.y > 0)
     {
         g.y = g.y - 1;
     }
     
-    if (down == 1) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
+    if (input[PadDown].pressed) && ((g.y) < (AV_SCREEN_HEIGHT - 1))
     {
         g.y = g.y + 1;
     }
     
-    if (left == 1) && (g.x > 0)
+    if (input[PadLeft].pressed) && (g.x > 0)
     {
         g.x = g.x - 1;
     }
     
-    if (right == 1) && ((g.x) < (AV_SCREEN_WIDTH - 1))
+    if (input[PadRight].pressed) && ((g.x) < (AV_SCREEN_WIDTH - 1))
     {
        g.x = g.x + 1;
     }
