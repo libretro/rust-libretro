@@ -339,9 +339,9 @@ unsafe fn blit_sprite(mut x: i32, mut y: i32)
     
     for ix in range(startx, w) {
         for iy in range (starty, h) {
-            let spr_pix =  spr_slice[ix as uint + iy as uint * 96];
-            if spr_pix != 0 {
-                buf_slice[x as uint - startx as uint + ix as uint + (y as uint - starty as uint + iy as uint) * AV_SCREEN_WIDTH as uint] = spr_pix;
+            let spr_pix =  spr_slice.unsafe_get(ix as uint + iy as uint * 96);
+            if *spr_pix != 0 {
+                *buf_slice.unsafe_mut(x as uint - startx as uint + ix as uint + (y as uint - starty as uint + iy as uint) * AV_SCREEN_WIDTH as uint) = *spr_pix;
             }
         }
     }
