@@ -142,22 +142,46 @@ pub fn core_run()
     // InputState::poll returns a struct than can be indexed with the
     // ControllerButton enum.
     let input = InputState::poll(playernum);
-   
+
+    
+    if input[PadA].pressed && !g.old_a
+    {
+        g.gobj[g.gobj_idx as uint]=GObj{x: g.x as i32, y: g.y as i32, dx: 0, dy: 0};
+        g.gobj_idx = g.gobj_idx + 1;
+    }
+    if g.gobj_idx == 256 {g.gobj_idx = 255;}
+    g.old_a = input[PadA].pressed;
     
     if (input[PadUp].pressed) && (g.y > 0) {
-        g.y = g.y - 32;
+        g.y = g.y - 48;
     }
     
     if (input[PadDown].pressed) && ((g.y) < ((AV_SCREEN_HEIGHT * 256) - 256)) {
-        g.y = g.y + 32;
+        g.y = g.y + 48;
     }
     
     if (input[PadLeft].pressed) && (g.x > 0) {
-        g.x = g.x - 32
+        g.x = g.x - 48;
     }
     
     if (input[PadRight].pressed) && ((g.x) < ((AV_SCREEN_WIDTH * 256)- 256)) {
-       g.x = g.x + 32;
+       g.x = g.x + 48;
+    }
+
+    for i in range(0u, 255)
+    {
+        let x = g.x as i32;
+        let y = g.y as i32;
+        if g.gobj[i].x > x {g.gobj[i].dx = g.gobj[i].dx - 1;}
+        if g.gobj[i].x < x {g.gobj[i].dx = g.gobj[i].dx + 1;}
+        if g.gobj[i].y > y {g.gobj[i].dy = g.gobj[i].dy - 1;}
+        if g.gobj[i].y <y {g.gobj[i].dy = g.gobj[i].dy + 1;}
+        g.gobj[i].x = g.gobj[i].x + g.gobj[i].dx;
+        g.gobj[i].y = g.gobj[i].y + g.gobj[i].dy;
+        if g.gobj[i].dx > 256 {g.gobj[i].dx = 256;}
+        if g.gobj[i].dx < -255 {g.gobj[i].dx = -255;}
+        if g.gobj[i].dy > 256 {g.gobj[i].dy = 256;}
+        if g.gobj[i].dy < -255 {g.gobj[i].dy = -255;}
     }
     
 }
@@ -173,9 +197,17 @@ pub fn snapshot_video()
     {
         snapshotx = g.x;
         snapshoty = g.y;
+        snapshotgobj_idx = g.gobj_idx;
+        for i in range(0, 255)
+        {
+            snapshotgobj[i] = g.gobj[i];
+        }
+        
     }
 }
 
+static mut snapshotgobj: [GObj, ..256] = [GObj{x: 0, y: 0, dx: 0, dy: 0}, ..256];
+static mut snapshotgobj_idx: u32 = 0;
 static mut snapshotx: u32 = 0;
 static mut snapshoty: u32 = 0;
 
@@ -184,11 +216,20 @@ static mut snapshoty: u32 = 0;
 // INTERNAL_SCALE_X, INTERNAL_SCALE_Y and write to frame_buf. If you use the
 // included blitting function this is handled for you. To gain the benefit of
 // internal scaling all screen object positions must be stored at sub-pixel
-// precision.
+// precision. This function does not need to be as strictly deterministic as
+// core_run(). So look as the results look the same from the same input, minor
+// differences in floating point rounding errors on different platforms do not
+// matter here.
 pub fn render_video()
 {
     image_loader();
-    unsafe {write_pixel(snapshotx / 256, snapshoty /256);}
+    unsafe {
+            write_pixel(snapshotx/256, snapshoty/256);
+        for i in range(0, snapshotgobj_idx)
+        {
+            blit_sprite((snapshotgobj[i as uint].x / 256), (snapshotgobj[i as uint].y / 256));
+        }
+    }
 }
 
 // This function returns the size in bytes of the serialized core logic state
@@ -205,7 +246,7 @@ pub fn get_serialize_size() -> uint
 // It may be simpler to avoid using pointers in the core state and use array
 // indices instead. Input state should not be serialized here as rust-libretro
 // serializes it automatically. Video state should not be serialized here as
-// it would conflict with proposed libretro 2.0 enhancements.
+// it is generated from the core state in snapshot_video().
 pub fn serialize_core_state()
 {
 }
@@ -216,6 +257,46 @@ pub fn unserialize_core_state()
 {
 }
 
+struct GState
+{
+    frame: uint,
+    x: u32,
+    y: u32,
+    gobj_idx: u32,
+    old_a: bool,
+    gobj: [GObj, ..256]
+}
+
+struct GObj
+{
+    x: i32,
+    y: i32,
+    dx: i32,
+    dy: i32
+}
+
+static mut g_state: GState =
+GState
+{
+    frame: 0,
+    x: 0,
+    y: 0,
+    gobj_idx: 0,
+    old_a: false,
+    gobj:[GObj{x: 0, y: 0, dx: 0, dy: 0}, ..256]
+};
+
+unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
+{
+      transmute(std::raw::Slice {data: base as *const T, len: length})
+}
+
+unsafe fn mem_as_slice<T>(base: *const T, length: uint) -> &'static [T] 
+{
+      transmute(std::raw::Slice {data: base as *const T, len: length})
+}
+
+
 pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 
 fn image_loader()
@@ -225,30 +306,49 @@ fn image_loader()
    }
 }
 
-struct GState
-{
-    frame: uint,
-    x: u32,
-    y: u32,
-    _phase: f32
-}
-
-static mut g_state: GState =
-GState
-{
-   frame: 0,
-   x: 0,
-   y: 0,
-   _phase: 0.0
-};
-
-unsafe fn mem_as_mut_slice<T>(base: *mut T, length: uint) -> &'static mut [T] 
-{
-      transmute(std::raw::Slice {data: base as *const T, len: length})
-}
-
 fn write_pixel(x: u32, y: u32)
 {
    let buf_slice = unsafe {mem_as_mut_slice(frame_buf as *mut u16, AV_SCREEN_WIDTH as uint * AV_SCREEN_HEIGHT as uint)};
    buf_slice[x as uint + y as uint * AV_SCREEN_WIDTH as uint] = 0xffff;   
 }
+
+pub static RAWSPRITE: &'static [u8] = include_bin!("sprite.raw");
+
+unsafe fn blit_sprite(mut x: i32, mut y: i32)
+{
+    let mut startx: u32 =0;
+    let mut starty: u32 =0;
+    
+    if x < 0 {startx = -x as u32; x = 0;}
+    if y < 0 {starty = -y as u32; y = 0;} 
+        
+    let x = x as u32;
+    let y = y as u32;
+
+    let mut w = 96u32;
+    let mut h = 19u32;
+
+    if x > AV_SCREEN_WIDTH || y > AV_SCREEN_HEIGHT {return};
+        
+    if x + w >= AV_SCREEN_WIDTH  { w = AV_SCREEN_WIDTH - x; }
+    if y + h >= AV_SCREEN_HEIGHT { h = AV_SCREEN_HEIGHT - y; }
+
+    
+    let buf_slice = mem_as_mut_slice(frame_buf as *mut u16, AV_SCREEN_WIDTH as uint * AV_SCREEN_HEIGHT as uint);
+    let spr_slice = mem_as_slice(RAWSPRITE.as_ptr() as *const u16, 96 as uint * 19 as uint);
+    
+    for ix in range(startx, w) {
+        for iy in range (starty, h) {
+            let spr_pix =  spr_slice[ix as uint + iy as uint * 96];
+            if spr_pix != 0 {
+                buf_slice[x as uint - startx as uint + ix as uint + (y as uint - starty as uint + iy as uint) * AV_SCREEN_WIDTH as uint] = spr_pix;
+            }
+        }
+    }
+}
+           
+                
+        
+    
+
+
