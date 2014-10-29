@@ -11,7 +11,7 @@ use std::mem::size_of;
 use std::mem::uninitialized;
 //use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 use rustrt::thread::Thread;
-use std::sync::atomics::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+use std::sync::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
 use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
 
 use rust_wrapper::libretro::*;
