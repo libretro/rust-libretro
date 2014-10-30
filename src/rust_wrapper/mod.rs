@@ -1,21 +1,19 @@
 use libc::c_uint;
 use libc::size_t;
-use std::mem::transmute;
+use core::intrinsics::transmute;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
-use std::ptr::null_mut;
+use core::ptr::null_mut;
 use libc::malloc;
 use libc::free;
-use std::c_str::CString;
-use std::mem::size_of;
-use std::mem::uninitialized;
-//use rustrt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
-use rustrt::thread::Thread;
-use std::sync::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
-use std::rt::mutex::{StaticNativeMutex, NATIVE_MUTEX_INIT};
-
+use core::mem::size_of;
+use core::mem::uninitialized;
 use rust_wrapper::libretro::*;
+use core::str::raw::c_str_to_static_slice;
+use core::prelude::*;
 pub mod libretro;
+
+
 
 // Set up the automatically configured callbacks
 pub static mut retro_video_refresh_cb: Option<retro_video_refresh_t> = None;
@@ -168,7 +166,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
             frame_mult.unwrap() as f64;
     }
     else {
-        panic!("Core option error");
+      //  fail!("Core option error");
     }
 
     set_retro_system_av_info(transmute(info), fps);
@@ -235,49 +233,40 @@ fn get_environment_frame_mult() -> Option<u32>
     unsafe { retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_VARIABLE,
                                            transmute(&get_variable)); }
 
-    // TODO convert to &str directly without heap allocation
     let refresh_rate =
-        unsafe { CString::new(transmute(get_variable.value), false) };
+        unsafe {c_str_to_static_slice(get_variable.value) };
 
-    if refresh_rate.as_str().is_some()
-    {
-        let refresh_slice: &str = refresh_rate.as_str().unwrap();
-        match CORE_LOGIC_RATE {
-            LogicRate60 =>
-                match refresh_slice {
-                    "30" => Some(2u32),
-                    "60" => Some(1u32),
-                    _ => None,
-                },
-            LogicRate120 =>
-                match refresh_slice {
-                    "30" => Some(4u32),
-                    "60" => Some(2u32),
-                    "120" => Some(1u32),
-                    _ => None,
-                },
-            LogicRate720 =>
-                match refresh_slice {
-                    "24" => Some(30u32),
-                    "30" => Some(24u32),
-                    "48" => Some(15u32),
-                    "51.4" => Some(14u32),
-                    "60" => Some(12u32),
-                    "72" => Some(10u32),
-                    "80" => Some(9u32),
-                    "90" => Some(8u32),
-                    "102.9" => Some(7u32),
-                    "120" => Some(6u32),
-                    "144" => Some(5u32),
-                    "180" => Some(4u32),
-                    "240" => Some(3u32),
-                    _ => None,
-                }
-        }
-    }
-    else
-    {
-        None
+    match CORE_LOGIC_RATE {
+        LogicRate60 =>
+            match refresh_rate {
+                "30" => Some(2u32),
+                "60" => Some(1u32),
+                _ => None,
+            },
+        LogicRate120 =>
+            match refresh_rate {
+                "30" => Some(4u32),
+                "60" => Some(2u32),
+                "120" => Some(1u32),
+                _ => None,
+            },
+        LogicRate720 =>
+            match refresh_rate {
+                "24" => Some(30u32),
+                "30" => Some(24u32),
+                "48" => Some(15u32),
+                "51.4" => Some(14u32),
+                "60" => Some(12u32),
+                "72" => Some(10u32),
+                "80" => Some(9u32),
+                "90" => Some(8u32),
+                "102.9" => Some(7u32),
+                "120" => Some(6u32),
+                "144" => Some(5u32),
+                "180" => Some(4u32),
+                "240" => Some(3u32),
+                _ => None,
+            }
     }
 }
 
@@ -426,7 +415,7 @@ impl InputState
 {
     pub fn poll(player: u32) -> InputState
     {
-        assert!(player < 16, "Tried to poll input for invalid player number");
+        // assert!(player < 16, "Tried to poll input for invalid player number");
         let state: InputState =
         unsafe
         {
@@ -462,7 +451,7 @@ pub extern fn retro_run()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
 
-    unsafe {VIDEO_LOCK.lock_noguard();}
+//    unsafe {VIDEO_LOCK.lock_noguard();}
     
     // For now, poll input hardware only once per displayed frame
     // (InputState::poll uses cached values)
@@ -475,17 +464,18 @@ pub extern fn retro_run()
             // Currently set to maximum possible
 
             super::snapshot_video();
-            unsafe {VIDEO_LOCK.unlock_noguard();}
-            unsafe {
-                let guard = VIDEO_WAIT.lock();
-                guard.signal();
-            }
+            super::render_video();
+  //          unsafe {VIDEO_LOCK.unlock_noguard();}
+  //          unsafe {
+  //              let guard = VIDEO_WAIT.lock();
+  //              guard.signal();
+  //          }
        }
        super::core_run();
     }
 
 
-    unsafe {VIDEO_LOCK.lock_noguard();}
+    //unsafe {VIDEO_LOCK.lock_noguard();}
     unsafe {
         retro_video_refresh_cb.unwrap()(frame_buf as *const c_void,
                                         AV_SCREEN_WIDTH,
@@ -493,7 +483,7 @@ pub extern fn retro_run()
                                         (AV_SCREEN_WIDTH *
                                          if COLOR_DEPTH_32 {4} else {2}) as size_t);
     }
-    unsafe {VIDEO_LOCK.unlock_noguard();}
+    //unsafe {VIDEO_LOCK.unlock_noguard();}
  
 }
 pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
@@ -502,17 +492,18 @@ pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
 pub unsafe extern "C" fn retro_init()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
+  
     frame_buf = malloc(((AV_SCREEN_WIDTH as uint) *
                         (AV_SCREEN_HEIGHT as uint)) as u64 *
                        if COLOR_DEPTH_32 {size_of::<u32>()}
                        else {size_of::<u16>()} as u64);
 
     // start video thread
-    Thread::spawn(video_thread);
+    //Thread::spawn(video_thread);
 }
 
+/*
 static VIDEO_SHUTDOWN: AtomicBool = INIT_ATOMIC_BOOL;
-
 static VIDEO_LOCK: StaticNativeMutex = NATIVE_MUTEX_INIT;
 static VIDEO_WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
 
@@ -531,18 +522,17 @@ fn video_thread()
         unsafe {VIDEO_LOCK.unlock_noguard();}
     }
 }
+*/
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_deinit()
 {
-    VIDEO_SHUTDOWN.store(true, SeqCst);
-    {
-        let guard = VIDEO_WAIT.lock();
-        guard.signal();
-    }
-    
-    
-    VIDEO_LOCK.destroy();
+//    VIDEO_SHUTDOWN.store(true, SeqCst);
+//    {
+//        let guard = VIDEO_WAIT.lock();
+//        guard.signal();
+//    }
+//    VIDEO_LOCK.destroy();
        
     if frame_buf != 0u8 as *mut c_void
         { free(frame_buf); }
