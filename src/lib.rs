@@ -199,10 +199,10 @@ pub fn core_run()
     // ControllerButton enum.
     let input = InputState::poll(playernum);
 
-   if input[PadB].pressed {
+/*   if input[PadB].pressed {
         let mut a = [0u32];
         a[1] = 0;
-        }
+        }*/
         
     
     if input[PadA].pressed && !g.old_a
