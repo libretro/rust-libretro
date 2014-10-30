@@ -168,7 +168,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
             frame_mult.unwrap() as f64;
     }
     else {
-        fail!("Core option error");
+        panic!("Core option error");
     }
 
     set_retro_system_av_info(transmute(info), fps);
