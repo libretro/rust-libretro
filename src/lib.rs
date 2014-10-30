@@ -86,10 +86,7 @@ extern fn panic_fmt(args: &core::fmt::Arguments,
     let _ = write!(&mut panic_writer, "{}", args);
 
     let panic_str = core::str::from_utf8(panic_writer.buffer);
-
-    retro_log(LogError, panic_str.unwrap());
-    retro_log(LogError, file);
-    retro_log_linenumber(LogError, line);
+    retro_log_panic(panic_str.unwrap(), file, line);
     unsafe {abort();}
 }
 

@@ -136,11 +136,15 @@ pub fn retro_log(level: LogLevel, text: &str)
     }
 }
 
-pub fn retro_log_linenumber(level: LogLevel, num: uint)
+pub fn retro_log_panic(msg: &str, file: &str, line: uint)
 {
     // TODO copy to the stack if text is short
     unsafe {
-        retro_log_cb.unwrap()(level as i32, "Line: %u\n\0".as_ptr() as *const c_char, num);
+        let c_msg = malloc_ascii_cstring(msg);
+        let c_file = malloc_ascii_cstring(file);
+        retro_log_cb.unwrap()(LogError as i32, "\"%s\" at %s line %u\n\0".as_ptr() as *const c_char, c_msg, c_file, line);
+        free(c_file as *mut c_void);
+        free(c_msg as *mut c_void);
     }
 }
 
