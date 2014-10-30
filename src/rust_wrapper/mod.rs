@@ -8,10 +8,17 @@ use libc::malloc;
 use libc::free;
 use core::mem::size_of;
 use core::mem::uninitialized;
-use rust_wrapper::libretro::*;
 use core::str::raw::c_str_to_static_slice;
 use core::prelude::*;
+use core::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+use rust_wrapper::mutex::*;
+use rust_wrapper::libretro::*;
+
 pub mod libretro;
+#[path = "rustrt_files/mutex.rs"] pub mod mutex;
+#[path = "rustrt_files/thread.rs"] pub mod thread;
+#[path = "rustrt_files/stack.rs"] pub mod stack;
+#[path = "rustrt_files/stack_overflow.rs"] pub mod stack_overflow;
 
 
 
@@ -451,7 +458,7 @@ pub extern fn retro_run()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
 
-//    unsafe {VIDEO_LOCK.lock_noguard();}
+    unsafe {VIDEO_LOCK.lock_noguard();}
     
     // For now, poll input hardware only once per displayed frame
     // (InputState::poll uses cached values)
@@ -465,17 +472,17 @@ pub extern fn retro_run()
 
             super::snapshot_video();
             super::render_video();
-  //          unsafe {VIDEO_LOCK.unlock_noguard();}
-  //          unsafe {
-  //              let guard = VIDEO_WAIT.lock();
-  //              guard.signal();
-  //          }
+            unsafe {VIDEO_LOCK.unlock_noguard();}
+            unsafe {
+                let guard = VIDEO_WAIT.lock();
+                guard.signal();
+            }
        }
        super::core_run();
     }
 
 
-    //unsafe {VIDEO_LOCK.lock_noguard();}
+    unsafe {VIDEO_LOCK.lock_noguard();}
     unsafe {
         retro_video_refresh_cb.unwrap()(frame_buf as *const c_void,
                                         AV_SCREEN_WIDTH,
@@ -483,7 +490,7 @@ pub extern fn retro_run()
                                         (AV_SCREEN_WIDTH *
                                          if COLOR_DEPTH_32 {4} else {2}) as size_t);
     }
-    //unsafe {VIDEO_LOCK.unlock_noguard();}
+    unsafe {VIDEO_LOCK.unlock_noguard();}
  
 }
 pub static mut frame_buf: *mut c_void = 0i as *mut c_void;
@@ -499,17 +506,16 @@ pub unsafe extern "C" fn retro_init()
                        else {size_of::<u16>()} as u64);
 
     // start video thread
-    //Thread::spawn(video_thread);
+    thread::Thread::spawn(video_thread);
 }
 
-/*
+
 static VIDEO_SHUTDOWN: AtomicBool = INIT_ATOMIC_BOOL;
 static VIDEO_LOCK: StaticNativeMutex = NATIVE_MUTEX_INIT;
 static VIDEO_WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
 
 fn video_thread()
 {
-    println!("Video thread starts");
     loop
     {
         unsafe {
@@ -522,17 +528,17 @@ fn video_thread()
         unsafe {VIDEO_LOCK.unlock_noguard();}
     }
 }
-*/
+
 
 #[no_mangle]
 pub unsafe extern "C" fn retro_deinit()
 {
-//    VIDEO_SHUTDOWN.store(true, SeqCst);
-//    {
-//        let guard = VIDEO_WAIT.lock();
-//        guard.signal();
-//    }
-//    VIDEO_LOCK.destroy();
+    VIDEO_SHUTDOWN.store(true, SeqCst);
+    {
+        let guard = VIDEO_WAIT.lock();
+        guard.signal();
+    }
+    VIDEO_LOCK.destroy();
        
     if frame_buf != 0u8 as *mut c_void
         { free(frame_buf); }

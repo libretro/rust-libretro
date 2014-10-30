@@ -26,11 +26,17 @@
 #![feature(globs)]
 #![feature(macro_rules)]
 #![feature(lang_items)]
+#![feature(unsafe_destructor)]
+#![feature(linkage)]
+#![feature(phase)]
+#![feature(asm)]
 #![no_std]
 
 extern crate libc;
 extern crate rlibc;
+#[phase(plugin, link)]
 extern crate core;
+extern crate alloc;
 
 use core::intrinsics::transmute;
 use core::intrinsics::abort;
@@ -39,16 +45,22 @@ use core::prelude::*;
 use rust_wrapper::*;
 pub mod rust_wrapper;
 
-#[lang = "stack_exhausted"] extern fn stack_exhausted() {}
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"]
+mod std { pub use core::fmt; }
 
+#[lang = "stack_exhausted"]
+extern fn stack_exhausted()
+{
+    unsafe {abort();}
+}
+
+#[lang = "eh_personality"] extern fn eh_personality() {}
+
+#[lang = "panic_fmt"]
 #[allow(unused_variables)]
 extern fn panic_fmt(args: &core::fmt::Arguments,
                        file: &str,
                     line: uint) -> !
 {
-
     unsafe {abort();}
 }
 
