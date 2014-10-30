@@ -26,8 +26,6 @@
 #![feature(globs)]
 #![feature(macro_rules)]
 #![feature(lang_items)]
-#![no_std]
-
 extern crate libc;
 extern crate rlibc;
 extern crate core;
@@ -38,19 +36,6 @@ use core::prelude::*;
 
 use rust_wrapper::*;
 pub mod rust_wrapper;
-
-#[lang = "stack_exhausted"] extern fn stack_exhausted() {}
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"]
-
-#[allow(unused_variables)]
-extern fn panic_fmt(args: &core::fmt::Arguments,
-                       file: &str,
-                    line: uint) -> !
-{
-
-    unsafe {abort();}
-}
 
 // Static configuration section.
 // All values must be set for the core to initialize correctly.
