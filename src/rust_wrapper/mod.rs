@@ -136,6 +136,14 @@ pub fn retro_log(level: LogLevel, text: &str)
     }
 }
 
+pub fn retro_log_linenumber(level: LogLevel, num: uint)
+{
+    // TODO copy to the stack if text is short
+    unsafe {
+        retro_log_cb.unwrap()(level as i32, "Line: %u\n\0".as_ptr() as *const c_char, num);
+    }
+}
+
 fn set_retro_system_av_info(info: &mut retro_system_av_info, fps: f64)
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, AV_PIXEL_ASPECT,
@@ -173,7 +181,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut retro_system_av_inf
             frame_mult.unwrap() as f64;
     }
     else {
-      //  fail!("Core option error");
+         panic!("Core option error");
     }
 
     set_retro_system_av_info(transmute(info), fps);

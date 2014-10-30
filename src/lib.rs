@@ -41,7 +41,8 @@ extern crate alloc;
 use core::intrinsics::transmute;
 use core::intrinsics::abort;
 use core::prelude::*;
-
+use core::fmt::FormatError;
+use core::fmt::FormatWriter;
 use rust_wrapper::*;
 pub mod rust_wrapper;
 
@@ -55,12 +56,40 @@ extern fn stack_exhausted()
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
 
+
+
 #[lang = "panic_fmt"]
 #[allow(unused_variables)]
 extern fn panic_fmt(args: &core::fmt::Arguments,
-                       file: &str,
+                    file: &str,
                     line: uint) -> !
 {
+    struct PanicWriter
+    {
+        buffer: [u8, ..1024],
+        offset: uint
+    }
+    
+    impl core::fmt::FormatWriter for PanicWriter
+    {
+        fn write(&mut self, bytes: &[u8]) -> Result<(), FormatError>
+        {
+            let buf_len = self.buffer.len();
+            let partial_buf = self.buffer.slice_mut(self.offset, buf_len);
+            core::slice::bytes::copy_memory(partial_buf, bytes);
+            self.offset = self.offset + bytes.len();
+            Ok(())
+        }
+    }
+
+    let mut panic_writer = PanicWriter {buffer: [0u8, ..1024], offset: 0};
+    let _ = write!(&mut panic_writer, "{}", args);
+
+    let panic_str = core::str::from_utf8(panic_writer.buffer);
+
+    retro_log(LogError, panic_str.unwrap());
+    retro_log(LogError, file);
+    retro_log_linenumber(LogError, line);
     unsafe {abort();}
 }
 
@@ -173,11 +202,11 @@ pub fn core_run()
     // ControllerButton enum.
     let input = InputState::poll(playernum);
 
-   /* if input[PadB].pressed {
+   if input[PadB].pressed {
         let mut a = [0u32];
         a[1] = 0;
         }
-     */   
+        
     
     if input[PadA].pressed && !g.old_a
     {
