@@ -40,26 +40,26 @@ extern crate rlibc;
 use core::intrinsics::transmute;
 use core::prelude::*;
 use rust_wrapper::*;
+#[macro_escape]
 pub mod rust_wrapper;
 // std must be declared even with #![no_std] for panic handling
 mod std { pub use core::fmt; }
 
 // Libretro core configuration section.
 // All values must be set for the core to initialize correctly.
-// All strs will be converted to C strings, and any non-ASCII characters will be
-// removed.
-
+    
 // Name and version number, for display in the frontend GUI.
-static CORE_NAME: &'static str =  "Example Core";
-static CORE_VERSION: &'static str = "0.0.1";
+// Non-ascii characters are forbidden
+CORE_NAME!("Example Core")
+CORE_VERSION!("0.0.1")
 
 // Does the core run without the frontend loading content for it?
 const NO_CONTENT: bool = true;
 
 // List of valid extensions for content, separated by pipes. For example:
-// static VALID_EXTENSIONS: &'static str = "bin|iso";
+// VALID_EXTENSIONS!("bin|iso")
 // If NO_CONTENT is true then VALID_EXTENSIONS is ignored.
-static VALID_EXTENSIONS: &'static str  = "";
+VALID_EXTENSIONS!("")
 
 // Core screen size in pixels.
 // Frontends provide various options for upscaling if this is lower than the

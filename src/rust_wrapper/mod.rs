@@ -27,8 +27,24 @@ pub mod libretro;
 #[path = "rustrt_files/stack.rs"] pub mod stack;
 #[path = "rustrt_files/stack_overflow.rs"] pub mod stack_overflow;
 
+macro_rules! CORE_NAME(
+    ($name:expr) => (
+        static CORE_NAME: &'static str = concat!($name,"\0");
+        );
+    )
 
+macro_rules! CORE_VERSION(
+    ($version:expr) => (
+        static CORE_VERSION: &'static str = concat!($version,"\0");
+        );
+    )
 
+macro_rules! VALID_EXTENSIONS(
+    ($ext:expr) => (
+        static VALID_EXTENSIONS: &'static str = concat!($ext,"\0");
+        );
+    )
+    
 #[lang = "stack_exhausted"]
 extern fn stack_exhausted()
 {
@@ -339,32 +355,13 @@ fn get_environment_frame_mult() -> Option<u32>
 }
 
 
-struct StaticSystemInfo
-{
-    name: *const c_char,
-    version: *const c_char,
-    extensions: *const c_char,
-}
-
-static mut static_system_info: StaticSystemInfo = StaticSystemInfo
-{
-    name: 0u8 as *const c_char,
-    version: 0u8 as *const c_char,
-    extensions: 0u8 as *const c_char,
-};
-
 #[no_mangle]
 pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 {
     use super::{CORE_NAME, CORE_VERSION, VALID_EXTENSIONS};
-
-    static_system_info.name = malloc_ascii_cstring(CORE_NAME);
-    static_system_info.version = malloc_ascii_cstring(CORE_VERSION);
-    static_system_info.extensions = malloc_ascii_cstring(VALID_EXTENSIONS);
-    
-    (*info).library_name     = static_system_info.name;
-    (*info).library_version  = static_system_info.version;
-    (*info).valid_extensions = static_system_info.extensions;
+    (*info).library_name     = CORE_NAME.as_ptr() as *const i8;
+    (*info).library_version  = CORE_VERSION.as_ptr() as *const i8;
+    (*info).valid_extensions = VALID_EXTENSIONS.as_ptr() as *const i8;
     (*info).need_fullpath    = false as u8;
     (*info).block_extract    = false as u8;
 }
@@ -600,16 +597,8 @@ pub unsafe extern "C" fn retro_deinit()
         guard.signal();
     }
     VIDEO_LOCK.destroy();
-       
-    if frame_buf != 0u8 as *mut c_void
-        { free(frame_buf); }
-    if static_system_info.name != 0u8 as *const c_char
-        { free(static_system_info.name as *mut c_void); }
-    if static_system_info.version != 0u8 as *const c_char
-        { free(static_system_info.version as *mut c_void); }
-    if static_system_info.extensions != 0u8 as *const c_char
-        { free(static_system_info.extensions as *mut c_void); }
-}
+}       
+
 
 // implement stubs for mandatory extern functions
 
