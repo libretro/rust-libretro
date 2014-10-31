@@ -22,75 +22,29 @@
     THE SOFTWARE.
  */
 
-#![crate_type = "dylib"]
-#![feature(globs)]
-#![feature(macro_rules)]
-#![feature(lang_items)]
-#![feature(unsafe_destructor)]
-#![feature(linkage)]
-#![feature(phase)]
-#![feature(asm)]
-#![no_std]
+// Rust configuration section
+// libretro cores with threading require many experimental Rust features.
+// Leave all this unchanged.
 
-extern crate libc;
-extern crate rlibc;
+#![crate_type = "dylib"]
+// All these features are required for native OS concurrency and panic handling
+// without the runtime.
+#![feature(macro_rules, globs, lang_items, unsafe_destructor, linkage, phase, asm)]
+#![no_std]
+// core must be loaded with plugin phase for panic handling
 #[phase(plugin, link)]
 extern crate core;
 extern crate alloc;
-
+extern crate libc;
+extern crate rlibc;
 use core::intrinsics::transmute;
-use core::intrinsics::abort;
 use core::prelude::*;
-use core::fmt::FormatError;
-use core::fmt::FormatWriter;
 use rust_wrapper::*;
 pub mod rust_wrapper;
-
+// std must be declared even with #![no_std] for panic handling
 mod std { pub use core::fmt; }
 
-#[lang = "stack_exhausted"]
-extern fn stack_exhausted()
-{
-    unsafe {abort();}
-}
-
-#[lang = "eh_personality"] extern fn eh_personality() {}
-
-
-
-#[lang = "panic_fmt"]
-#[allow(unused_variables)]
-extern fn panic_fmt(args: &core::fmt::Arguments,
-                    file: &str,
-                    line: uint) -> !
-{
-    struct PanicWriter
-    {
-        buffer: [u8, ..1024],
-        offset: uint
-    }
-    
-    impl core::fmt::FormatWriter for PanicWriter
-    {
-        fn write(&mut self, bytes: &[u8]) -> Result<(), FormatError>
-        {
-            let buf_len = self.buffer.len();
-            let partial_buf = self.buffer.slice_mut(self.offset, buf_len);
-            core::slice::bytes::copy_memory(partial_buf, bytes);
-            self.offset = self.offset + bytes.len();
-            Ok(())
-        }
-    }
-
-    let mut panic_writer = PanicWriter {buffer: [0u8, ..1024], offset: 0};
-    let _ = write!(&mut panic_writer, "{}", args);
-
-    let panic_str = core::str::from_utf8(panic_writer.buffer);
-    retro_log_panic(panic_str.unwrap(), file, line);
-    unsafe {abort();}
-}
-
-// Static configuration section.
+// Libretro core configuration section.
 // All values must be set for the core to initialize correctly.
 // All strs will be converted to C strings, and any non-ASCII characters will be
 // removed.

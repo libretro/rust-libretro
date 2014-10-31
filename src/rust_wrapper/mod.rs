@@ -1,3 +1,5 @@
+extern crate core;
+
 use libc::c_uint;
 use libc::size_t;
 use core::intrinsics::transmute;
@@ -11,6 +13,11 @@ use core::mem::uninitialized;
 use core::str::raw::c_str_to_static_slice;
 use core::prelude::*;
 use core::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+
+use core::fmt::FormatError;
+use core::fmt::FormatWriter;
+use core::intrinsics::abort;
+
 use rust_wrapper::mutex::*;
 use rust_wrapper::libretro::*;
 
@@ -20,6 +27,48 @@ pub mod libretro;
 #[path = "rustrt_files/stack.rs"] pub mod stack;
 #[path = "rustrt_files/stack_overflow.rs"] pub mod stack_overflow;
 
+
+
+#[lang = "stack_exhausted"]
+extern fn stack_exhausted()
+{
+    unsafe {abort();}
+}
+
+#[lang = "eh_personality"] extern fn eh_personality() {}
+
+
+#[lang = "panic_fmt"]
+#[allow(unused_variables)]
+extern fn panic_fmt(args: &core::fmt::Arguments,
+                    file: &str,
+                    line: uint) -> !
+{
+    struct PanicWriter
+    {
+        buffer: [u8, ..1024],
+        offset: uint
+    }
+    
+    impl core::fmt::FormatWriter for PanicWriter
+    {
+        fn write(&mut self, bytes: &[u8]) -> Result<(), FormatError>
+        {
+            let buf_len = self.buffer.len();
+            let partial_buf = self.buffer.slice_mut(self.offset, buf_len);
+            core::slice::bytes::copy_memory(partial_buf, bytes);
+            self.offset = self.offset + bytes.len();
+            Ok(())
+        }
+    }
+
+    let mut panic_writer = PanicWriter {buffer: [0u8, ..1024], offset: 0};
+    let _ = write!(&mut panic_writer, "{}", args);
+
+    let panic_str = core::str::from_utf8(panic_writer.buffer);
+    retro_log_panic(panic_str.unwrap(), file, line);
+    unsafe {abort();}
+}
 
 
 // Set up the automatically configured callbacks
