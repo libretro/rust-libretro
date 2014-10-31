@@ -47,9 +47,9 @@ mod std { pub use core::fmt; }
 
 // Libretro core configuration section.
 // All values must be set for the core to initialize correctly.
+// All configuration strings must be plain ASCII.
     
 // Name and version number, for display in the frontend GUI.
-// Non-ascii characters are forbidden
 CORE_NAME!("Example Core")
 CORE_VERSION!("0.0.1")
 

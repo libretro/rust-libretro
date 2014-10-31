@@ -33,16 +33,16 @@ solution is to clone this repo and make your updates directly.
 You can then merge updated versions of only the files in rust_wrapper:
 
 Set up a remote to upstream if you haven't already done so:
-$ git remote add upstream https://github.com/mprobinson/rust-libretro.git
+    $ git remote add upstream https://github.com/mprobinson/rust-libretro.git
 
 Fetch changes from upstream:
-$ git fetch upstream
+    $ git fetch upstream
 
 Tell git to prepare for a partial merge:
-$ git merge --no-ff --no-commit -s ours upstream/master
+    $ git merge --no-ff --no-commit -s ours upstream/master
 
 Checkout only the changes to files in src/rust_wrapper:
-$ git checkout upstream/master src/rust_wrapper/*
+    $ git checkout upstream/master src/rust_wrapper/*
 
 Merge those changes:
-$ git commit
+    $ git commit
