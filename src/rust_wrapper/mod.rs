@@ -316,6 +316,17 @@ fn get_environment_frame_mult() -> Option<u32>
 pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 {
     use super::{CORE_NAME, CORE_VERSION, VALID_EXTENSIONS};
+
+    for retro_string in [CORE_NAME, CORE_VERSION, VALID_EXTENSIONS].iter()
+    {
+        if !retro_string.is_ascii() {
+            panic!("Configuration strings must be ascii.");
+        }
+        if !retro_string.is_terminated() {
+            panic!("Configuration strings must be null terminated.");
+        }
+    }
+    
     (*info).library_name     = CORE_NAME.as_ptr() as *const i8;
     (*info).library_version  = CORE_VERSION.as_ptr() as *const i8;
     (*info).valid_extensions = VALID_EXTENSIONS.as_ptr() as *const i8;
@@ -323,6 +334,28 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
     (*info).block_extract    = false as u8;
 }
 
+trait RetroString
+{
+    fn is_ascii(self) -> bool;
+    fn is_terminated(self) -> bool;
+}
+
+impl RetroString for &'static str
+{
+    fn is_ascii(self) -> bool
+    {
+        for b in self.as_bytes().iter()
+        {
+            if (b & 0x80) != 0 { return false; }
+        }
+        true
+    }
+    fn is_terminated(self) -> bool
+    {
+        if self.as_bytes()[self.len() - 1] != 0u8 { return false; }
+        true
+    }
+}
 unsafe fn malloc_ascii_cstring(src: &str) -> *const c_char
 {
     let terminated_max_len = (src.as_bytes().len() + 1) as size_t;
