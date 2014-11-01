@@ -6,16 +6,9 @@ use libc::size_t;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
 
-use core::intrinsics::transmute;
-use core::ptr::null_mut;
-use core::mem::size_of;
-use core::mem::uninitialized;
-use core::str::raw::c_str_to_static_slice;
 use core::prelude::*;
+use core::intrinsics::transmute;
 use core::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
-
-use core::fmt::FormatError;
-use core::fmt::FormatWriter;
 
 use rust_wrapper::libretro::*;
 pub use rust_wrapper::input::{InputState, ButtonState, ControllerButton,
@@ -23,12 +16,12 @@ pub use rust_wrapper::input::{InputState, ButtonState, ControllerButton,
                               PadLeft, PadRight, PadA, PadX, PadL, PadR,
                               PadL2, PadR2, PadL3, PadR3};
 mod input;
-#[allow(dead_code)]
-mod libretro;
-#[path = "rustrt_files/mutex.rs"] pub mod mutex;
-#[path = "rustrt_files/thread.rs"] pub mod thread;
-#[path = "rustrt_files/stack.rs"] pub mod stack;
-#[path = "rustrt_files/stack_overflow.rs"] pub mod stack_overflow;
+mod lang_items;
+#[allow(dead_code)] mod libretro;
+#[allow(dead_code)] #[path = "rustrt_files/mutex.rs"] mod mutex;
+#[allow(dead_code)] #[path = "rustrt_files/thread.rs"] mod thread;
+#[allow(dead_code)] #[path = "rustrt_files/stack.rs"] mod stack;
+#[allow(dead_code)] #[path = "rustrt_files/stack_overflow.rs"] mod stack_overflow;
 
 macro_rules! CORE_NAME(
     ($name:expr) => (
@@ -48,50 +41,7 @@ macro_rules! VALID_EXTENSIONS(
         );
     )
     
-#[lang = "stack_exhausted"]
-extern fn stack_exhausted()
-{
-    unsafe {
-        core::intrinsics::abort();
-    }
-}
 
-#[lang = "eh_personality"] extern fn eh_personality() {}
-
-
-#[lang = "panic_fmt"]
-#[allow(unused_variables)]
-extern fn panic_fmt(args: &core::fmt::Arguments,
-                    file: &str,
-                    line: uint) -> !
-{
-    struct PanicWriter
-    {
-        buffer: [u8, ..1024],
-        offset: uint
-    }
-    
-    impl core::fmt::FormatWriter for PanicWriter
-    {
-        fn write(&mut self, bytes: &[u8]) -> Result<(), core::fmt::FormatError>
-        {
-            let buf_len = self.buffer.len();
-            let partial_buf = self.buffer.slice_mut(self.offset, buf_len);
-            core::slice::bytes::copy_memory(partial_buf, bytes);
-            self.offset = self.offset + bytes.len();
-            Ok(())
-        }
-    }
-
-    let mut panic_writer = PanicWriter {buffer: [0u8, ..1024], offset: 0};
-    let _ = write!(&mut panic_writer, "{}", args);
-
-    let panic_str = core::str::from_utf8(panic_writer.buffer);
-    retro_log_panic(panic_str.unwrap(), file, line);
-    unsafe {
-        core::intrinsics::abort();
-    }
-}
 
 
 // Set up the automatically configured callbacks
@@ -302,7 +252,7 @@ fn get_frame_mult() -> Option<u32>
 
         if change != 0
         {
-            let info: retro_system_av_info = uninitialized();
+            let info: retro_system_av_info = core::mem::uninitialized();
             set_retro_system_av_info(transmute(&info), CORE_LOGIC_RATE as u32 as f64 /
                                cached_frame_mult.unwrap() as f64);
             retro_environment_cb.unwrap()(
@@ -325,7 +275,7 @@ fn get_environment_frame_mult() -> Option<u32>
                                            transmute(&get_variable)); }
 
     let refresh_rate =
-        unsafe {c_str_to_static_slice(get_variable.value) };
+        unsafe {core::str::raw::c_str_to_static_slice(get_variable.value) };
 
     match CORE_LOGIC_RATE {
         LogicRate60 =>
@@ -456,8 +406,8 @@ pub unsafe extern "C" fn retro_init()
   
     frame_buf = libc::malloc(((AV_SCREEN_WIDTH as uint) *
                               (AV_SCREEN_HEIGHT as uint)) as u64 *
-                             if COLOR_DEPTH_32 {size_of::<u32>()}
-                             else {size_of::<u16>()} as u64);
+                             if COLOR_DEPTH_32 {core::mem::size_of::<u32>()}
+                             else {core::mem::size_of::<u16>()} as u64);
 
     // start video thread
     thread::Thread::spawn(video_thread);
@@ -520,7 +470,7 @@ pub extern "C" fn retro_unload_game() {}
 #[no_mangle]
 pub extern "C" fn retro_get_region() -> c_uint { RETRO_REGION_NTSC }
 #[no_mangle]
-pub extern "C" fn retro_get_memory_data(_id: c_uint) -> *mut u8 { null_mut() }
+pub extern "C" fn retro_get_memory_data(_id: c_uint) -> *mut u8 { core::ptr::null_mut() }
 #[no_mangle]
 pub extern "C" fn retro_get_memory_size(_id: c_uint) -> size_t { 0 }
 #[no_mangle]
