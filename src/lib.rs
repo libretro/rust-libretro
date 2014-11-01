@@ -40,8 +40,10 @@ extern crate rlibc;
 use core::intrinsics::transmute;
 use core::prelude::*;
 use rust_wrapper::*;
+
 #[macro_escape]
 pub mod rust_wrapper;
+
 // std must be declared even with #![no_std] for panic handling
 mod std { pub use core::fmt; }
 

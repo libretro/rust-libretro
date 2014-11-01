@@ -1,13 +1,13 @@
 extern crate core;
+extern crate libc;
 
 use libc::c_uint;
 use libc::size_t;
-use core::intrinsics::transmute;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
+
+use core::intrinsics::transmute;
 use core::ptr::null_mut;
-use libc::malloc;
-use libc::free;
 use core::mem::size_of;
 use core::mem::uninitialized;
 use core::str::raw::c_str_to_static_slice;
@@ -16,12 +16,15 @@ use core::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
 
 use core::fmt::FormatError;
 use core::fmt::FormatWriter;
-use core::intrinsics::abort;
 
-use rust_wrapper::mutex::*;
 use rust_wrapper::libretro::*;
-
-pub mod libretro;
+pub use rust_wrapper::input::{InputState, ButtonState, ControllerButton,
+                              PadB, PadY, PadSelect, PadStart, PadUp, PadDown,
+                              PadLeft, PadRight, PadA, PadX, PadL, PadR,
+                              PadL2, PadR2, PadL3, PadR3};
+mod input;
+#[allow(dead_code)]
+mod libretro;
 #[path = "rustrt_files/mutex.rs"] pub mod mutex;
 #[path = "rustrt_files/thread.rs"] pub mod thread;
 #[path = "rustrt_files/stack.rs"] pub mod stack;
@@ -48,7 +51,9 @@ macro_rules! VALID_EXTENSIONS(
 #[lang = "stack_exhausted"]
 extern fn stack_exhausted()
 {
-    unsafe {abort();}
+    unsafe {
+        core::intrinsics::abort();
+    }
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
@@ -68,7 +73,7 @@ extern fn panic_fmt(args: &core::fmt::Arguments,
     
     impl core::fmt::FormatWriter for PanicWriter
     {
-        fn write(&mut self, bytes: &[u8]) -> Result<(), FormatError>
+        fn write(&mut self, bytes: &[u8]) -> Result<(), core::fmt::FormatError>
         {
             let buf_len = self.buffer.len();
             let partial_buf = self.buffer.slice_mut(self.offset, buf_len);
@@ -83,7 +88,9 @@ extern fn panic_fmt(args: &core::fmt::Arguments,
 
     let panic_str = core::str::from_utf8(panic_writer.buffer);
     retro_log_panic(panic_str.unwrap(), file, line);
-    unsafe {abort();}
+    unsafe {
+        core::intrinsics::abort();
+    }
 }
 
 
@@ -197,7 +204,7 @@ pub fn retro_log(level: LogLevel, text: &str)
     unsafe {
         let c_text = malloc_ascii_cstring(text);
         retro_log_cb.unwrap()(level as i32, "%s\n\0".as_ptr() as *const c_char, c_text);
-        free(c_text as *mut c_void);
+        libc::free(c_text as *mut c_void);
     }
 }
 
@@ -208,8 +215,8 @@ pub fn retro_log_panic(msg: &str, file: &str, line: uint)
         let c_msg = malloc_ascii_cstring(msg);
         let c_file = malloc_ascii_cstring(file);
         retro_log_cb.unwrap()(LogError as i32, "\"%s\" at %s line %u\n\0".as_ptr() as *const c_char, c_msg, c_file, line);
-        free(c_file as *mut c_void);
-        free(c_msg as *mut c_void);
+        libc::free(c_file as *mut c_void);
+        libc::free(c_msg as *mut c_void);
     }
 }
 
@@ -369,7 +376,7 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 unsafe fn malloc_ascii_cstring(src: &str) -> *const c_char
 {
     let terminated_max_len = (src.as_bytes().len() + 1) as size_t;
-    let dst: *mut c_char = malloc(terminated_max_len) as *mut c_char;
+    let dst: *mut c_char = libc::malloc(terminated_max_len) as *mut c_char;
     strip_utf_strlcpy(dst, src.as_bytes(), terminated_max_len);
     dst as *const c_char
 }
@@ -398,118 +405,7 @@ unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
 }
 
 
-// WARNING
-// Don't change without also changing InputState and static asserts
-pub enum ControllerButton
-{
-    PadB = RETRO_DEVICE_ID_JOYPAD_B as int,
-    PadY = RETRO_DEVICE_ID_JOYPAD_Y as int,
-    PadSelect = RETRO_DEVICE_ID_JOYPAD_SELECT as int,
-    PadStart = RETRO_DEVICE_ID_JOYPAD_START as int,
-    PadUp = RETRO_DEVICE_ID_JOYPAD_UP as int,
-    PadDown = RETRO_DEVICE_ID_JOYPAD_DOWN as int,
-    PadLeft = RETRO_DEVICE_ID_JOYPAD_LEFT as int,
-    PadRight = RETRO_DEVICE_ID_JOYPAD_RIGHT as int,
-    PadA = RETRO_DEVICE_ID_JOYPAD_A as int,
-    PadX = RETRO_DEVICE_ID_JOYPAD_X as int,
-    PadL = RETRO_DEVICE_ID_JOYPAD_L as int,
-    PadR = RETRO_DEVICE_ID_JOYPAD_R as int,
-    PadL2 = RETRO_DEVICE_ID_JOYPAD_L2 as int,
-    PadR2 = RETRO_DEVICE_ID_JOYPAD_R2 as int,
-    PadL3 = RETRO_DEVICE_ID_JOYPAD_L3 as int,
-    PadR3 = RETRO_DEVICE_ID_JOYPAD_R3 as int,
-}
 
-#[static_assert]
-static _I0: bool = (PadB as int == 0);
-#[static_assert]
-static _I1: bool = (PadY as int == 1);
-#[static_assert]
-static _I2: bool = (PadSelect as int == 2);
-#[static_assert]
-static _I3: bool = (PadStart as int == 3);
-#[static_assert]
-static _I4: bool = (PadUp as int == 4);
-#[static_assert]
-static _I5: bool = (PadDown as int == 5);
-#[static_assert]
-static _I6: bool = (PadLeft as int == 6);
-#[static_assert]
-static _I7: bool = (PadRight as int == 7);
-#[static_assert]
-static _I8: bool = (PadA as int == 8);
-#[static_assert]
-static _I9: bool = (PadX as int == 9);
-#[static_assert]
-static _I10: bool = (PadL as int == 10);
-#[static_assert]
-static _I11: bool = (PadR as int == 11);
-#[static_assert]
-static _I12: bool = (PadL2 as int == 12);
-#[static_assert]
-static _I13: bool = (PadR2 as int == 13);
-#[static_assert]
-static _I14: bool = (PadL3 as int == 14);
-#[static_assert]
-static _I15: bool = (PadR3 as int == 15);
-
-pub struct InputState
-{
-    // WARNING
-    // Don't change size without also changing ControllerButton
-    // and static asserts
-    button: [ButtonState, ..16]
-}
-
-pub struct ButtonState
-{
-    pub pressed: bool,
-    pub down: bool,
-    pub up: bool
-}
-
-impl Index<ControllerButton, ButtonState> for InputState
-{
-    fn index<'a>(&'a self, index: &ControllerButton) -> &'a ButtonState
-    {
-        unsafe {self.button.unsafe_get(*index as uint)}
-    }
-}
-
-impl InputState
-{
-    pub fn poll(player: u32) -> InputState
-    {
-        // assert!(player < 16, "Tried to poll input for invalid player number");
-        let state: InputState =
-        unsafe
-        {
-            InputState
-            {
-                button: [
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadB as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadY as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadSelect as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadStart as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadUp as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadDown as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadLeft as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadRight as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadA as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadX as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadL as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadR as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadL2 as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadR2 as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadL3 as u32) != 0, down: false, up: false},
-                    ButtonState {pressed: retro_input_state_cb.unwrap()(player, RETRO_DEVICE_JOYPAD, 0, PadR3 as u32) != 0, down: false, up: false},
-                    ]
-            }
-        };
-        // TODO track state changes and update down and up fields
-        state      
-    }
-}
 
 #[no_mangle]
 pub extern fn retro_run()
@@ -558,10 +454,10 @@ pub unsafe extern "C" fn retro_init()
 {
     use super::{AV_SCREEN_WIDTH, AV_SCREEN_HEIGHT, COLOR_DEPTH_32};
   
-    frame_buf = malloc(((AV_SCREEN_WIDTH as uint) *
-                        (AV_SCREEN_HEIGHT as uint)) as u64 *
-                       if COLOR_DEPTH_32 {size_of::<u32>()}
-                       else {size_of::<u16>()} as u64);
+    frame_buf = libc::malloc(((AV_SCREEN_WIDTH as uint) *
+                              (AV_SCREEN_HEIGHT as uint)) as u64 *
+                             if COLOR_DEPTH_32 {size_of::<u32>()}
+                             else {size_of::<u16>()} as u64);
 
     // start video thread
     thread::Thread::spawn(video_thread);
@@ -569,8 +465,8 @@ pub unsafe extern "C" fn retro_init()
 
 
 static VIDEO_SHUTDOWN: AtomicBool = INIT_ATOMIC_BOOL;
-static VIDEO_LOCK: StaticNativeMutex = NATIVE_MUTEX_INIT;
-static VIDEO_WAIT: StaticNativeMutex = NATIVE_MUTEX_INIT;
+static VIDEO_LOCK: mutex::StaticNativeMutex = mutex::NATIVE_MUTEX_INIT;
+static VIDEO_WAIT: mutex::StaticNativeMutex = mutex::NATIVE_MUTEX_INIT;
 
 fn video_thread()
 {
@@ -597,6 +493,7 @@ pub unsafe extern "C" fn retro_deinit()
         guard.signal();
     }
     VIDEO_LOCK.destroy();
+    if frame_buf != 0u8 as *mut c_void { libc::free(frame_buf); }
 }       
 
 
