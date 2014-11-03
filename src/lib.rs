@@ -35,8 +35,9 @@
 #[phase(plugin, link)]
 extern crate core;
 extern crate alloc;
+extern crate collections;
 extern crate libc;
-extern crate rlibc;
+
 use core::intrinsics::transmute;
 use core::prelude::*;
 use rust_wrapper::*;
@@ -132,9 +133,25 @@ const AV_SAMPLE_RATE: f64 = 48000.0;
 // higher image quality.
 const COLOR_DEPTH_32: bool = false;
 
+// You may specify environment variables as an array of EnvVar
+// structs. eg.:
+const ENV_VARS: &'static [EnvVar] = [
+    EnvVar { key: "cheats",
+             desc: "Enable cheats",
+             // first element of values is the default
+             values: ["no", "yes"], },
+   ];
+// These will be appended to the list of automatically provided environment
+// variables. Leave the list empty if you do not want custom environment
+// variables. eg.:
+// const ENV_VARS: &'static[EnvVar] = [];
+
+
+
 // You must implement several functions that will be automatically called by
 // rust-libretro.
-// First is core_run(). You can poll input here with
+//
+// Every core must implement core_run(). You can poll input here with
 // InputState::poll(playernum) and update the core state accordingly. All state
 // change must be deterministic across all platforms, so be careful with
 // threading and floating point math. See
@@ -319,7 +336,10 @@ pub static RAWIMAGE: &'static [u8] = include_bin!("rgb565.raw");
 fn image_loader()
 {
    unsafe {
-   	rlibc::memcpy(transmute(frame_buf), transmute(&RAWIMAGE[0]), (AV_SCREEN_WIDTH * AV_SCREEN_HEIGHT * 2) as uint);
+       core::intrinsics::copy_nonoverlapping_memory::<u8>(transmute(frame_buf),
+                                                    transmute(&RAWIMAGE[0]),
+                                                    (AV_SCREEN_WIDTH *
+                                                     AV_SCREEN_HEIGHT * 2) as uint);
    }
 }
 
@@ -354,8 +374,8 @@ unsafe fn blit_sprite(mut x: i32, mut y: i32)
     let buf_slice = mem_as_mut_slice(frame_buf as *mut u16, AV_SCREEN_WIDTH as uint * AV_SCREEN_HEIGHT as uint);
     let spr_slice = mem_as_slice(RAWSPRITE.as_ptr() as *const u16, 96 as uint * 19 as uint);
     
-    for ix in range(startx, w) {
-        for iy in range (starty, h) {
+    for iy in range(starty, h) {
+        for ix in range (startx, w) {
             let spr_pix =  spr_slice.unsafe_get(ix as uint + iy as uint * 96);
             if *spr_pix != 0 {
                 *buf_slice.unsafe_mut(x as uint - startx as uint + ix as uint + (y as uint - starty as uint + iy as uint) * AV_SCREEN_WIDTH as uint) = *spr_pix;

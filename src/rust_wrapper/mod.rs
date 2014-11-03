@@ -1,14 +1,15 @@
 extern crate core;
 extern crate libc;
+extern crate collections;
 
 use libc::c_uint;
 use libc::size_t;
 use libc::types::common::c95::c_void;
 use libc::types::os::arch::c95::c_char;
-
 use core::prelude::*;
 use core::intrinsics::transmute;
 use core::atomic::{AtomicBool, SeqCst, INIT_ATOMIC_BOOL};
+use collections::*;
 
 use rust_wrapper::libretro::*;
 pub use rust_wrapper::input::{InputState, ButtonState, ControllerButton,
@@ -41,6 +42,11 @@ macro_rules! VALID_EXTENSIONS(
         );
     )
     
+pub struct EnvVar {
+    pub key: &'static str,
+    pub desc: &'static str,
+    pub values: &'static [&'static str]
+}
 
 
 
@@ -84,58 +90,117 @@ pub unsafe extern "C" fn retro_set_input_state(cb: retro_input_state_t)
 static NO_CONTENT_FLAG: u8  = true as u8;
 static REQUIRED_CONTENT_FLAG: u8 = false as u8;
 
-static mut retro_variables: [retro_variable, ..2] =
-    [retro_variable {key: 0u as *const c_char, value: 0u as *const c_char}, ..2];
-
 pub enum CoreLogicRate {
     LogicRate60 = 60,
     LogicRate120 = 120,
     LogicRate720 = 720,
 }
 
-static FRAME_RATE_KEY: &'static str = "refresh_rate\0";
+static FRAME_RATE_KEY: &'static str = "frame_rate\0";
 static LOW_FRAME_RATE_VALUES: &'static str =
-    "Display Refresh Rate; 60|30\0";
+    "Frame rate; 60|30\0";
 static MEDIUM_FRAME_RATE_VALUES: &'static str =
-    "Display Refresh Rate; 60|120|30\0";
+    "Frame rate; 60|120|30\0";
 static HIGH_FRAME_RATE_VALUES: &'static str =
-    "Display Refresh Rate; 60|72|80|90|102.9|120|144|180|240|24|30|48|51.4|\0";
+    "Frame rate; 60|72|80|90|102.9|120|144|180|240|24|30|48|51.4|\0";
 
 static mut retro_environment_cb: Option<retro_environment_t> = None;
 static mut retro_log_cb: Option<retro_log_printf_t> = None;
 #[no_mangle]
-pub unsafe extern "C" fn retro_set_environment(cb: retro_environment_t)
+pub extern "C" fn retro_set_environment(cb: retro_environment_t)
 {
-    use super::{NO_CONTENT, CORE_LOGIC_RATE};
-    
-    retro_environment_cb = Some(cb);
-    
-    let no_content: *mut c_void =
-        if NO_CONTENT {
-            transmute(&NO_CONTENT_FLAG)
-        } else {
-            transmute(&REQUIRED_CONTENT_FLAG)
-        };
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,
-                                  no_content);
+    use super::{NO_CONTENT, ENV_VARS, CORE_LOGIC_RATE};
+    use collections::slice::{MutableOrdSlice, CloneableVector};
 
-    let keyptr = FRAME_RATE_KEY.as_ptr() as *const i8;
+    unsafe {
+        retro_environment_cb = Some(cb);
 
-    retro_variables[0] =
-        retro_variable { key: keyptr,
+        let log_interface = retro_log_callback { log: transmute(0u) };
+        retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_LOG_INTERFACE,
+                                      transmute(&log_interface));
+        retro_log_cb = Some(log_interface.log);
+    
+        let no_content: *mut c_void =
+            if NO_CONTENT {
+                transmute(&NO_CONTENT_FLAG)
+            } else {
+                transmute(&REQUIRED_CONTENT_FLAG)
+            };
+        retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,
+                                      no_content);
+    }
+
+    // reserve space for automatically implemented + null retro_variables
+    let num_vars = ENV_VARS.len() + 2;
+    let mut retro_variables = Vec::<retro_variable>::with_capacity(num_vars);
+    // Rust needs to hold onto the & references until after the call to C
+    let mut keystrings = Vec::<String>::with_capacity(num_vars);
+    let mut descstrings = Vec::<String>::with_capacity(num_vars);
+    
+    // add the automatic env variables
+    retro_variables.push(
+        retro_variable { key: FRAME_RATE_KEY.as_ptr() as *const i8,
                          value: match CORE_LOGIC_RATE {
                              LogicRate60 => LOW_FRAME_RATE_VALUES,
                              LogicRate120 => MEDIUM_FRAME_RATE_VALUES,
                              LogicRate720 => HIGH_FRAME_RATE_VALUES,
-                             }.as_ptr() as *const c_char };
-        
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_SET_VARIABLES,
-                                  retro_variables.as_mut_ptr() as *mut c_void);
+                         }.as_ptr() as *const c_char } );
+    keystrings.push(String::from_str(FRAME_RATE_KEY));
 
-    let log_interface = retro_log_callback { log: transmute(0u) };
-    retro_environment_cb.unwrap()(RETRO_ENVIRONMENT_GET_LOG_INTERFACE,
-                                  transmute(&log_interface));
-    retro_log_cb = Some(log_interface.log);
+    // add the use env variables
+    for var in ENV_VARS.iter() {
+        for byte in var.key.as_bytes().iter() {
+            if *byte == 0u8 { panic!("ENV_VAR key must not contain nulls."); }
+        }
+        let key = var.key.to_ascii_cstring();
+
+        for byte in var.desc.as_bytes().iter() {
+            if *byte == 0u8 { panic!("ENV_VAR desc must not contain nulls."); }
+        }
+        // desc.len() + semicolon + space + [value.len() + pipe]
+        let value_max_len =
+            var.desc.len() + 1 + 1 +
+            var.values.iter().fold(0, |sum, &x| sum + x.len() + 1);
+        let mut value_string = String::with_capacity(value_max_len);
+
+        value_string.push_str(var.desc);
+        value_string.push_str("; ");
+
+        for value in var.values.iter() {
+            for byte in value.as_bytes().iter() {
+                if *byte == 0u8 {
+                    panic!("ENV_VAR values must not contain nulls.");
+                }
+            }
+            value_string.push_str(*value);
+            value_string.push_str("|");
+        }
+        let value_cstring = value_string.to_ascii_cstring();
+        
+        retro_variables.push(
+            retro_variable { key: key.as_ptr() as *const c_char,
+                             value: value_cstring.as_ptr() as *const c_char } );
+        keystrings.push(key);
+        descstrings.push(value_cstring);
+    }
+
+    retro_variables.push(retro_variable { key: 0u as *const c_char,
+                                          value: 0u as *const c_char } );
+    keystrings.push(String::from_str(""));
+
+    let mut key_sort= keystrings.clone();
+    key_sort.sort();
+    let mut key_unique = key_sort.to_vec();
+    key_unique.dedup();
+    if keystrings.len() != key_unique.len() {
+        panic!("Duplicate environment variable keys are forbidden. Are you trying to manually implement an automatic environment variable?");
+    }
+   
+    unsafe {
+        retro_environment_cb.unwrap()(
+            RETRO_ENVIRONMENT_SET_VARIABLES,
+            retro_variables.as_mut_ptr() as *mut c_void);
+    }
 }
 
 pub enum LogLevel
@@ -152,9 +217,9 @@ pub fn retro_log(level: LogLevel, text: &str)
 {
     // TODO copy to the stack if text is short
     unsafe {
-        let c_text = malloc_ascii_cstring(text);
-        retro_log_cb.unwrap()(level as i32, "%s\n\0".as_ptr() as *const c_char, c_text);
-        libc::free(c_text as *mut c_void);
+        let c_text = text.to_ascii_cstring();
+        retro_log_cb.unwrap()(level as i32, "%s\n\0".as_ptr() as *const c_char,
+                              c_text.as_ptr() as *const c_char);
     }
 }
 
@@ -162,12 +227,14 @@ pub fn retro_log_panic(msg: &str, file: &str, line: uint)
 {
     // TODO copy to the stack if text is short
     unsafe {
-        let c_msg = malloc_ascii_cstring(msg);
-        let c_file = malloc_ascii_cstring(file);
-        retro_log_cb.unwrap()(LogError as i32, "\"%s\" at %s line %u\n\0".as_ptr() as *const c_char, c_msg, c_file, line);
-        libc::free(c_file as *mut c_void);
-        libc::free(c_msg as *mut c_void);
-    }
+        let c_msg = msg.to_ascii_cstring();
+        let c_file = file.to_ascii_cstring();
+        retro_log_cb.unwrap()(
+            LogError as i32, "\"%s\" at %s line %u\n\0".as_ptr() as *const c_char,
+            c_msg.as_ptr() as *const c_char,
+            c_file.as_ptr() as *const c_char,
+            line);
+   }
 }
 
 fn set_retro_system_av_info(info: &mut retro_system_av_info, fps: f64)
@@ -319,14 +386,9 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 
     for retro_string in [CORE_NAME, CORE_VERSION, VALID_EXTENSIONS].iter()
     {
-        if !retro_string.is_ascii() {
-            panic!("Configuration strings must be ascii.");
-        }
-        if !retro_string.is_terminated() {
-            panic!("Configuration strings must be null terminated.");
-        }
+        retro_string.check_valid();
     }
-    
+   
     (*info).library_name     = CORE_NAME.as_ptr() as *const i8;
     (*info).library_version  = CORE_VERSION.as_ptr() as *const i8;
     (*info).valid_extensions = VALID_EXTENSIONS.as_ptr() as *const i8;
@@ -336,57 +398,41 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut retro_system_info)
 
 trait RetroString
 {
-    fn is_ascii(self) -> bool;
-    fn is_terminated(self) -> bool;
+    fn check_valid(self);
+    fn to_ascii_cstring(self) -> String;
 }
 
-impl RetroString for &'static str
+impl<'a> RetroString for &'a str
 {
-    fn is_ascii(self) -> bool
+    fn check_valid(self)
     {
         for b in self.as_bytes().iter()
         {
-            if (b & 0x80) != 0 { return false; }
+            if (b & 0x80) != 0 {
+                panic!("All libretro strings must be ascii.");
+            }
         }
-        true
+        if self.as_bytes()[self.len() - 1] != 0u8 {
+            panic!("All libretro strings must be null terminated.");
+        }
     }
-    fn is_terminated(self) -> bool
+    fn to_ascii_cstring(self) -> String
     {
-        if self.as_bytes()[self.len() - 1] != 0u8 { return false; }
-        true
-    }
-}
-unsafe fn malloc_ascii_cstring(src: &str) -> *const c_char
-{
-    let terminated_max_len = (src.as_bytes().len() + 1) as size_t;
-    let dst: *mut c_char = libc::malloc(terminated_max_len) as *mut c_char;
-    strip_utf_strlcpy(dst, src.as_bytes(), terminated_max_len);
-    dst as *const c_char
-}
-
-unsafe fn strip_utf_strlcpy(dst: *mut c_char, src: &[u8], dst_size: size_t)
-{
-    if dst_size == 0 { return; }
-    if dst_size == 1
-    {
-        *dst = 0i8;
-        return;
-    }
-    
-    let mut dst_offset: int = 0;
-    let dst_last = dst_size - 1; // reserve space for NULL terminator
-    for src_byte in src.iter()
-    {
-        if (*src_byte & 0x80) == 0
+        let terminated_max_len = self.as_bytes().len() + 1;
+        
+        let mut dst = String::with_capacity(terminated_max_len);
+        
+        for src_byte in self.bytes()
         {
-            *dst.offset(dst_offset) = *src_byte as i8;
-            dst_offset = dst_offset + 1;
-            if dst_offset == dst_last as int { break; }
+            if (src_byte & 0x80) == 0
+            {
+                dst.push(src_byte as char);
+            }
         }
-    }
-    *dst.offset(dst_offset) = 0i8;
+        dst.push('\0');
+        dst
+    }    
 }
-
 
 
 
@@ -417,7 +463,6 @@ pub extern fn retro_run()
        }
        super::core_run();
     }
-
 
     unsafe {VIDEO_LOCK.lock_noguard();}
     unsafe {

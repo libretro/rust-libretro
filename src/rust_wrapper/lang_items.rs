@@ -19,6 +19,7 @@ extern fn panic_fmt(args: &core::fmt::Arguments,
                     file: &str,
                     line: uint) -> !
 {
+    // TODO handle panics before retro_log_cb is ready
     struct PanicWriter
     {
         buffer: [u8, ..1024],
