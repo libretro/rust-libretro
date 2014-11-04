@@ -51,3 +51,19 @@ Checkout only the changes to files in src/rust_wrapper:
 Merge those changes:
 
 `$ git commit`
+
+
+Compilation
+===========
+
+Rust currently sets all library symbols visible, resulting is very bloated
+libraries. If you are linking with GNU ld it is possible to restrict the visible
+symbols to those required by the libretro API, using a version script. Cargo
+does not support custom rustc parameters, so first run cargo with --verbose to
+discover the cargo parameters. Then run rustc manually, passing the version
+script in src/visible_symbols.script by appending:
+
+`-C link-args="-Wl,-version-script=src/visible_symbols.script -Wl,-gc-sections"`
+
+This will result in a much more reasonably sized core. The core size may be
+futher reduced without loss of function by running `strip -s`.
