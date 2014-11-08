@@ -110,7 +110,7 @@ static mut retro_log_cb: Option<retro_log_printf_t> = None;
 pub extern "C" fn retro_set_environment(cb: retro_environment_t)
 {
     use super::{NO_CONTENT, ENV_VARS, CORE_LOGIC_RATE};
-    use collections::slice::{MutableOrdSlice, CloneableVector};
+    use collections::slice::{OrdSliceAllocPrelude};
 
     unsafe {
         retro_environment_cb = Some(cb);
@@ -190,9 +190,8 @@ pub extern "C" fn retro_set_environment(cb: retro_environment_t)
 
     let mut key_sort= keystrings.clone();
     key_sort.sort();
-    let mut key_unique = key_sort.to_vec();
-    key_unique.dedup();
-    if keystrings.len() != key_unique.len() {
+    key_sort.dedup();
+    if keystrings.len() != key_sort.len() {
         panic!("Duplicate environment variable keys are forbidden. Are you trying to manually implement an automatic environment variable?");
     }
    
@@ -408,7 +407,7 @@ impl<'a> RetroString for &'a str
     {
         for b in self.as_bytes().iter()
         {
-            if (b & 0x80) != 0 {
+            if (*b & 0x80) != 0 {
                 panic!("All libretro strings must be ascii.");
             }
         }
